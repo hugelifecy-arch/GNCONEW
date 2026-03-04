@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { track } from '@/lib/analytics'
 
 export function PricingSection() {
   return (
@@ -32,6 +35,7 @@ export function PricingSection() {
             </ul>
             <Link
               href="/architect"
+              onClick={() => track('upgrade_cta_clicked', { cta_location: 'pricing_section', target_plan: 'beta' })}
               className="mt-8 inline-block rounded-sm bg-accent-gold px-6 py-3 text-base font-semibold text-bg-primary transition hover:bg-accent-gold-light"
             >
               Start Free →
@@ -60,7 +64,11 @@ export function PricingSection() {
               <li>✓ API access</li>
             </ul>
             <a
-              href="mailto:contact@gnco.io"
+              href="mailto:contact@gnco.io?subject=Waitlist: Professional"
+              onClick={() => {
+                track('waitlist_joined', { plan_tier: 'professional' })
+                track('upgrade_cta_clicked', { cta_location: 'pricing_section', target_plan: 'professional' })
+              }}
               className="mt-8 inline-block rounded-sm border border-bg-border bg-transparent px-6 py-3 text-base font-semibold text-text-primary transition hover:border-accent-gold hover:text-accent-gold"
             >
               Join Waitlist →

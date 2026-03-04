@@ -8,18 +8,58 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  clerkId        String          @unique
-  email          String          @unique
+  id             String                 @id @default(cuid())
+  clerkId        String                 @unique
+  email          String                 @unique
   name           String?
   organization   String?
-  role           String          @default("viewer")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  role           String                 @default("viewer")
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
   accessRequests AccessRequest[]
   auditLogs      AuditLog[]
+  memberships    OrganizationMember[]
 
   @@map("users")
+}
+
+model Organization {
+  id        String               @id @default(cuid())
+  name      String
+  plan      String               @default("beta")
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  members   OrganizationMember[]
+  invites   Invite[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String       @default("viewer")
+  invitedAt      DateTime     @default(now())
+  joinedAt       DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("organization_members")
+}
+
+model Invite {
+  id             String       @id @default(cuid())
+  organizationId String
+  email          String
+  role           String       @default("viewer")
+  token          String       @unique @default(cuid())
+  expiresAt      DateTime
+  usedAt         DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("invites")
 }
 
 model AccessRequest {

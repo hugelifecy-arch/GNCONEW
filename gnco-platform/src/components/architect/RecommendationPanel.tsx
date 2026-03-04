@@ -251,17 +251,17 @@ export function RecommendationPanel({ brief, onStartNew }: RecommendationPanelPr
         </div>
         <p className="mt-5 max-w-4xl text-text-secondary">{primary.reasoning}</p>
         <p className="mt-4 text-sm text-text-secondary">
-          <Citation source="Service provider estimates" url="https://gnco.ai/methodology" marker="1">
+          <Citation source="Service provider estimates" url="/methodology" marker="1">
             Est. Formation Cost: {formatCurrency(primary.estimatedFormationCost.min, true)}–{formatCurrency(primary.estimatedFormationCost.max, true)}
           </Citation>{' '}
           |{' '}
-          <Citation source="Relevant regulator setup guidance" url="https://gnco.ai/coverage" marker="2">
+          <Citation source="Relevant regulator setup guidance" url="/coverage" marker="2">
             Est. Timeline: {primary.estimatedTimelineWeeks.min}–{primary.estimatedTimelineWeeks.max} wks
           </Citation>
         </p>
         <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           <p>
-            <Citation source="Relevant tax authority and treaty references" url="https://gnco.ai/disclosures" marker="3">
+            <Citation source="Relevant tax authority and treaty references" url="/disclosures" marker="3">
               Tax Efficiency: {scoreBar(primary.scores.taxEfficiency)} {primary.scores.taxEfficiency}
             </Citation>
           </p>
@@ -324,7 +324,7 @@ export function RecommendationPanel({ brief, onStartNew }: RecommendationPanelPr
                 <input value={row.domicile} onChange={(e) => setTaxRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, domicile: e.target.value } : item)))} placeholder="Domicile" className="col-span-3 rounded-md border border-bg-border bg-bg-elevated px-2 py-2 text-sm" />
                 <input type="number" value={row.commitment} onChange={(e) => setTaxRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, commitment: Number(e.target.value) } : item)))} className="col-span-3 rounded-md border border-bg-border bg-bg-elevated px-2 py-2 text-sm" />
                 <div className="col-span-2 flex items-center text-sm">
-                  <Citation source="Relevant tax authority and treaty references" url="https://gnco.ai/disclosures" marker="3">
+                  <Citation source="Relevant tax authority and treaty references" url="/disclosures" marker="3">
                     {taxImpact.toFixed(1)}% effective
                   </Citation>
                 </div>
@@ -351,7 +351,7 @@ export function RecommendationPanel({ brief, onStartNew }: RecommendationPanelPr
           <li><span className="text-text-primary">Key Decisions Requiring Legal Input:</span> blocker selection, governance rights, and side letter framework.</li>
           <li>
             <span className="text-text-primary">Estimated Budget:</span>{' '}
-            <Citation source="Service provider estimates" url="https://gnco.ai/methodology" marker="1">
+            <Citation source="Service provider estimates" url="/methodology" marker="1">
               {formatCurrency(primary.estimatedFormationCost.min, true)}–{formatCurrency(primary.estimatedFormationCost.max, true)} plus local admin.
             </Citation>
           </li>

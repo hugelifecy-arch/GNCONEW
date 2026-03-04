@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { JURISDICTIONS } from '@/lib/jurisdiction-data'
 
-const headlineWords = "Architect the World's Most Sophisticated Fund Structures.".split(' ')
+const headlineWords = 'The Fund Structure Decision That Takes 6 Weeks — Made in 30 Minutes.'.split(' ')
 
 function StatsStrip() {
   return (
@@ -17,6 +17,30 @@ function StatsStrip() {
         </a>
       </p>
     </div>
+  )
+}
+
+function ValueBullets() {
+  const bullets = [
+    'Cut pre-formation legal costs by up to €50,000+ — enter counsel with a data-backed recommendation, not a blank brief.',
+    'Model your exact LP base — GNCO calculates withholding tax impact for up to 50 LPs by domicile, so you optimize for your investors, not averages.',
+    `${JURISDICTIONS.length} jurisdictions · 52 templates · one platform — from Cayman and Luxembourg to Cyprus and Singapore.`,
+  ]
+
+  return (
+    <motion.ul
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.4 }}
+      className="mx-auto mt-8 max-w-2xl space-y-4 text-left"
+    >
+      {bullets.map((bullet, index) => (
+        <li key={index} className="flex items-start gap-3 text-sm text-text-secondary md:text-base">
+          <span className="mt-0.5 shrink-0 text-accent-gold">✓</span>
+          <span>{bullet}</span>
+        </li>
+      ))}
+    </motion.ul>
   )
 }
 
@@ -79,8 +103,10 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mx-auto mt-6 max-w-3xl text-lg text-text-secondary md:text-xl"
         >
-          GNCO eliminates 6 weeks and €50,000+ in legal fees by modeling your optimal fund structure before you call counsel. Make jurisdiction decisions in hours, not months.
+          GNCO models your optimal fund structure across {JURISDICTIONS.length} global jurisdictions, quantifies LP-level tax impact, and generates your attorney brief — before you spend a euro on legal fees.
         </motion.p>
+
+        <ValueBullets />
 
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -101,6 +127,15 @@ export function HeroSection() {
             View Methodology →
           </Link>
         </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="mt-4 text-sm text-text-tertiary"
+        >
+          No credit card required · Free during Open Beta · Paid plans Q3 2026
+        </motion.p>
 
         <StatsStrip />
       </div>

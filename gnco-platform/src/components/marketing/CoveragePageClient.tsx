@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 
 import { COVERAGE_DATA } from '@/data/coverage'
 import { Citation } from '@/components/ui/Citation'
+import { DataVersionBadge } from '@/components/ui/DataVersionBadge'
 
 export function CoveragePageClient() {
   const [query, setQuery] = useState('')
@@ -23,6 +24,9 @@ export function CoveragePageClient() {
             Jurisdiction details are rendered from our structured coverage dataset with explicit cost currency labels,
             timelines, and methodology metadata.
           </p>
+          <div className="mt-2">
+            <DataVersionBadge />
+          </div>
         </section>
 
         <section className="rounded-xl border border-bg-border bg-bg-surface p-4">
@@ -43,12 +47,12 @@ export function CoveragePageClient() {
             <article key={jurisdiction.slug} className="rounded-xl border border-bg-border bg-bg-elevated p-5">
               <h2 className="text-xl font-semibold">{jurisdiction.name}</h2>
               <p className="mt-3 text-sm text-text-secondary">
-                <Citation source="Service provider estimates" url="https://gnco.ai/methodology" marker="1">
+                <Citation source="Service provider estimates" url="/methodology" marker="1">
                   Formation cost: {jurisdiction.formationCostRange}
                 </Citation>
               </p>
               <p className="text-sm text-text-secondary">
-                <Citation source="Relevant regulator setup guidance" url="https://gnco.ai/coverage" marker="2">
+                <Citation source="Relevant regulator setup guidance" url="/coverage" marker="2">
                   Timeline: {jurisdiction.timelineRange}
                 </Citation>
               </p>
