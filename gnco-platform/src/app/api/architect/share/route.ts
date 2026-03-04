@@ -1,4 +1,5 @@
-import { nanoid } from 'nanoid'
+import crypto from 'crypto'
+import { Prisma } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
@@ -14,13 +15,13 @@ const fallbackStore = new Map<string, SharedResult>()
 export async function POST(request: NextRequest) {
   try {
     const data = (await request.json()) as Record<string, unknown>
-    const shareId = nanoid(10)
+    const shareId = crypto.randomUUID().slice(0, 10)
 
     try {
       await prisma.sharedResult.create({
         data: {
           id: shareId,
-          data: data as Record<string, unknown>,
+          data: data as Prisma.InputJsonValue,
           views: 0,
         },
       })

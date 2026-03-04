@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 
@@ -36,7 +37,7 @@ export async function createSavedComparison(
         name: input.name,
         columns: input.columns,
         scoreSummary: input.scoreSummary,
-        payload: input.payload as Record<string, unknown>,
+        payload: input.payload as Prisma.InputJsonValue,
       },
     })
     return {
@@ -89,7 +90,7 @@ export async function createSharedComparison(
     const record = await prisma.sharedComparison.create({
       data: {
         id: crypto.randomUUID().slice(0, 10),
-        payload: payload as Record<string, unknown>,
+        payload: payload as Prisma.InputJsonValue,
         passwordHash,
       },
     })
