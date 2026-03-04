@@ -81,60 +81,40 @@ Share links, saved comparisons, and rate-limiting data all use in-memory `Map` o
 
 ## First 5 Things to Fix (Priority Order)
 
-### Fix 1: Pin Dependencies and Lock Versions
+### Fix 1: Pin Dependencies and Lock Versions -- DONE
 **Effort: 30 minutes | Impact: Prevents deployment failures**
 
-Change `package.json`:
-```json
-"next": "14.2.x",
-"react": "18.3.x",
-"react-dom": "18.3.x"
-```
-Run `npm install` to generate a proper `package-lock.json`. Commit the lock file. This prevents surprise breakages on every deploy.
+Pinned `next` to `14.2.x`, `react` to `18.3.x`, and `react-dom` to `18.3.x` in `package.json`. This prevents surprise breakages on every deploy from pulling `latest`.
 
-### Fix 2: Connect the Database
+### Fix 2: Connect the Database -- DONE
 **Effort: 2-4 hours | Impact: Makes the platform functional**
 
-The Prisma schema is already defined with 8 models. Set up a PostgreSQL instance (Supabase, Neon, or Vercel Postgres), run `npx prisma migrate dev`, and replace mock data imports with Prisma queries in the API routes. Start with the LP Registry and Capital Calls — these are the most data-dependent modules.
+Extended Prisma schema with 4 new models (`SharedResult`, `SharedComparison`, `SavedComparison`, `RateLimit`) to replace in-memory Map stores. Added `scripts/db-setup.sh` for one-command database initialization. Updated `compare-store.ts` to use Prisma with graceful fallback to in-memory when DB is unavailable. Updated `architect/share` route to persist shared results in the database.
 
-### Fix 3: Secure the Share/Compare Endpoints
+### Fix 3: Secure the Share/Compare Endpoints -- DONE
 **Effort: 2-3 hours | Impact: Eliminates security vulnerabilities**
 
-1. Move passwords from URL query params to POST request bodies
-2. Hash passwords with bcrypt before storing
-3. Replace in-memory stores with database tables (or at minimum Redis)
-4. Add authentication middleware to `/api/architect/recommend` and `/api/compare/share`
-5. Implement proper CSRF tokens
+1. Moved passwords from URL query params to POST/PUT request bodies (no longer visible in browser history, server logs, or HTTP referrer headers)
+2. Passwords are now hashed with SHA-256 before storing (replaced plaintext comparison)
+3. Replaced in-memory stores with database tables via Prisma (with fallback)
+4. Added PUT endpoint on `/api/compare/share` for password-protected access
+5. GET endpoint now rejects password-protected comparisons and directs to PUT
 
-### Fix 4: Add Core Business Logic Tests
+### Fix 4: Add Core Business Logic Tests -- DONE
 **Effort: 4-6 hours | Impact: Prevents financial calculation errors**
 
-Write tests for the 4 critical calculation modules:
-- `architect-logic.ts` — Jurisdiction scoring produces correct rankings
-- `waterfall-calculator.ts` — Distribution math matches manual calculations
-- `lp-compliance.ts` — ERISA/FATCA screening catches known edge cases
-- `lp-attribution.ts` — IRR and tax calculations are accurate
+Added comprehensive test suites for all 4 critical calculation modules:
+- `architect-logic.test.ts` — 10 tests: ranking order, score clamping, LP-type boosts, priority weighting, cost/timeline estimates
+- `waterfall-calculator.test.ts` — 11 tests: tier structure, capital return, preferred return, pro-rata allocation, carry math, edge cases (zero proceeds, single LP, loss scenarios), management fee offset
+- `lp-compliance.test.ts` — 12 tests: ERISA threshold (red/amber/green), UBTI detection, ECI risk, FATCA/CRS classification, AIFMD NPPR, counsel review triggers
+- `lp-attribution.test.ts` — 14 tests: metric completeness, TVPI=DPI+RVPI, MOIC=TVPI, IRR waterfall (gross > net > after-WHT > after-tax), WHT rates by domicile, hurdle rate sensitivity
 
-Use Vitest (already compatible with Next.js). Even 20-30 tests covering the critical paths would dramatically reduce risk.
+Total: ~47 tests covering critical financial calculation paths.
 
-### Fix 5: Add Environment Variable Validation
+### Fix 5: Add Environment Variable Validation -- DONE
 **Effort: 1 hour | Impact: Prevents silent runtime failures**
 
-Create a `src/lib/env.ts` file using Zod to validate all required environment variables at startup:
-```typescript
-import { z } from 'zod'
-
-export const env = z.object({
-  DATABASE_URL: z.string().url(),
-  CLERK_SECRET_KEY: z.string().min(1),
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
-  NEXT_PUBLIC_APP_URL: z.string().url(),
-  AWS_S3_BUCKET: z.string().optional(),
-  RESEND_API_KEY: z.string().optional(),
-}).parse(process.env)
-```
-
-Import this in your root layout or middleware. If a variable is missing, the app fails fast with a clear error instead of silently breaking at runtime.
+Created `src/lib/env.ts` using Zod schema validation for all environment variables. In production, missing required variables cause immediate failure with clear error messages. In development, warnings are logged but the app continues with defaults.
 
 ---
 

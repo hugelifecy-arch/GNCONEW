@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Invalid save payload.' }, { status: 400 })
     }
 
-    const saved = createSavedComparison({
+    const saved = await createSavedComparison({
       name: body.name,
       columns: body.columns,
       scoreSummary: body.scoreSummary,
@@ -29,5 +29,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json({ success: true, comparisons: listSavedComparisons() })
+  const comparisons = await listSavedComparisons()
+  return NextResponse.json({ success: true, comparisons })
 }

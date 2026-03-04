@@ -132,3 +132,40 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+model SharedResult {
+  id        String   @id @default(cuid())
+  data      Json
+  views     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("shared_results")
+}
+
+model SharedComparison {
+  id           String   @id @default(cuid())
+  payload      Json
+  passwordHash String?
+  createdAt    DateTime @default(now())
+
+  @@map("shared_comparisons")
+}
+
+model SavedComparison {
+  id           String   @id @default(cuid())
+  name         String
+  columns      String[]
+  scoreSummary Float
+  payload      Json
+  createdAt    DateTime @default(now())
+
+  @@map("saved_comparisons")
+}
+
+model RateLimit {
+  id        String   @id
+  attempts  Int      @default(1)
+  windowStart DateTime @default(now())
+
+  @@map("rate_limits")
+}
