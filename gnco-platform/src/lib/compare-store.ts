@@ -1,4 +1,3 @@
-import { nanoid } from 'nanoid'
 import crypto from 'crypto'
 
 import { prisma } from '@/lib/prisma'
@@ -33,7 +32,7 @@ export async function createSavedComparison(
   try {
     const record = await prisma.savedComparison.create({
       data: {
-        id: nanoid(10),
+        id: crypto.randomUUID().slice(0, 10),
         name: input.name,
         columns: input.columns,
         scoreSummary: input.scoreSummary,
@@ -51,7 +50,7 @@ export async function createSavedComparison(
   } catch {
     // Fallback to in-memory if DB is unavailable
     const comparison: SavedComparisonData = {
-      id: nanoid(10),
+      id: crypto.randomUUID().slice(0, 10),
       createdAt: new Date().toISOString(),
       ...input,
     }
@@ -89,7 +88,7 @@ export async function createSharedComparison(
   try {
     const record = await prisma.sharedComparison.create({
       data: {
-        id: nanoid(10),
+        id: crypto.randomUUID().slice(0, 10),
         payload: payload as Record<string, unknown>,
         passwordHash,
       },
@@ -100,7 +99,7 @@ export async function createSharedComparison(
       passwordProtected: Boolean(passwordHash),
     }
   } catch {
-    const id = nanoid(10)
+    const id = crypto.randomUUID().slice(0, 10)
     fallbackSharedComparisons.set(id, {
       id,
       createdAt: new Date().toISOString(),
