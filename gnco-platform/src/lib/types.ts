@@ -201,10 +201,12 @@ export interface JurisdictionProfile {
   flag: string
   primaryVehicles: string[]
   regulator: string
+  regulatorUrl: string
   taxTreatyStrength: 'high' | 'medium' | 'limited'
   setupTimeWeeks: { min: number; max: number }
   annualCostRange: { min: number; max: number }
   formationCostRange: { min: number; max: number }
+  suitabilityScore: number
   bestFor: string[]
   notIdealFor: string[]
   coverageStatus: 'full' | 'partial' | 'coming-soon'
@@ -216,6 +218,10 @@ export interface JurisdictionProfile {
   taxTreaties: string[]
   fatcaStatus: string
   notes: string
+  strategies: ('PE' | 'RE' | 'VC' | 'PC')[]
+  dataVersion: string
+  lastUpdated: string
+  sourceNote: string
 }
 
 export interface AccessRequest {

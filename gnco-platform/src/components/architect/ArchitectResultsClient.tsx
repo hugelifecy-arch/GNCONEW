@@ -1,13 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AttorneyBrief } from '@/components/AttorneyBrief'
 import { generateRecommendations } from '@/lib/architect-logic'
 import { JURISDICTIONS } from '@/lib/jurisdiction-data'
 import type { ArchitectBrief } from '@/lib/types'
 import { Citation } from '@/components/ui/Citation'
+import { DataVersionBadge } from '@/components/ui/DataVersionBadge'
+import { EmailCaptureForm } from '@/components/architect/EmailCaptureForm'
+import { track } from '@/lib/analytics'
 
 const WIZARD_STORAGE_KEY = 'gnco:architect-brief'
 
@@ -53,6 +56,7 @@ function formatPriority(priority: string) {
 export function ArchitectResultsClient() {
   const [brief] = useState<Partial<ArchitectBrief> | null>(() => getSavedBrief())
   const [tradeoffs, setTradeoffs] = useState({ cost: 50, time: 50, familiarity: 50, taxFriction: 50 })
+  const [emailSubmitted, setEmailSubmitted] = useState(false)
 
   const topThree = useMemo(() => {
     if (!brief) return []
@@ -66,6 +70,17 @@ export function ArchitectResultsClient() {
 
   const topPriorities = (brief?.priorities ?? []).slice(0, 3).map(formatPriority)
 
+  const hasTracked = useRef(false)
+  useEffect(() => {
+    if (!hasTracked.current && topThree.length > 0) {
+      hasTracked.current = true
+      track('architect_engine_completed', {
+        top_jurisdiction: topThree[0]?.jurisdiction,
+        fund_size: brief?.fundSize,
+        strategy: brief?.strategy,
+      })
+    }
+  }, [topThree, brief])
 
 
   if (!brief) {
@@ -111,7 +126,7 @@ export function ArchitectResultsClient() {
       <section className="rounded-xl border border-bg-border bg-bg-surface p-6">
         <h2 className="text-xl font-semibold">Why this ranked #1</h2>
         <p className="mt-3 text-sm text-text-secondary">
-          <Citation source="GNCO methodology weighting framework" url="https://gnco.ai/methodology" marker="4">
+          <Citation source="GNCO methodology weighting framework" url="/methodology" marker="4">
             The methodology currently weights tax efficiency ({methodologyWeights.taxFriction}%), LP familiarity ({methodologyWeights.lpFamiliarity}%), speed to close ({methodologyWeights.timeToClose}%), and cost of formation ({methodologyWeights.cost}%) as core factors.
           </Citation>{' '}
           Your current slider priorities emphasize cost ({tradeoffs.cost}%), time ({tradeoffs.time}%), LP familiarity ({tradeoffs.familiarity}%), and tax friction ({tradeoffs.taxFriction}%).
@@ -131,7 +146,20 @@ export function ArchitectResultsClient() {
         </ul>
       </section>
 
-      <AttorneyBrief brief={brief} recommendations={topThree} />
+      {!emailSubmitted ? (
+        <EmailCaptureForm
+          fundStrategy={brief.strategy}
+          fundSize={brief.fundSize}
+          topJurisdiction={topThree[0]?.jurisdiction}
+          onSuccess={() => setEmailSubmitted(true)}
+        />
+      ) : (
+        <AttorneyBrief brief={brief} recommendations={topThree} />
+      )}
+
+      <div className="mt-6 text-center">
+        <DataVersionBadge />
+      </div>
     </main>
   )
 }

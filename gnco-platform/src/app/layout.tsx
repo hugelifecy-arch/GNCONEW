@@ -4,19 +4,22 @@ import { DisclaimerFooterBar } from '@/components/shared/DisclaimerFooterBar'
 import { LayoutNavigation } from '@/components/navigation/LayoutNavigation'
 import { LayoutPageFrame } from '@/components/navigation/LayoutPageFrame'
 import { PrivacyModeProvider } from '@/components/shared/PrivacyModeContext'
+import { CookieBanner } from '@/components/ui/CookieBanner'
 import './globals.css'
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://gnconew.vercel.app'
 
 export const metadata: Metadata = {
   title: 'GNCO — Global Fund Architect | 15-Jurisdiction Fund Structure Modeling',
   description: 'Model, compare, and optimize fund structures across 15 jurisdictions in minutes. Built for family offices, GPs, and fund architects. Free open beta access — no credit card required.',
   keywords: ['fund structure', 'jurisdiction selection', 'family office', 'fund architecture', 'Cayman Islands fund', 'Luxembourg fund', 'AIFMD', 'fund formation'],
   authors: [{ name: 'GNCO' }],
-  metadataBase: new URL('https://gnconew.vercel.app'),
-  
+  metadataBase: new URL(BASE_URL),
+
   openGraph: {
     title: 'GNCO — Global Fund Architect',
     description: 'Model optimal fund structures across 15 jurisdictions. From Cayman to Luxembourg to Singapore — in minutes, not months. Free beta access.',
-    url: 'https://gnconew.vercel.app',
+    url: BASE_URL,
     siteName: 'GNCO',
     type: 'website',
     images: [
@@ -28,20 +31,20 @@ export const metadata: Metadata = {
       },
     ],
   },
-  
+
   twitter: {
     card: 'summary_large_image',
     title: 'GNCO — Global Fund Architect',
     description: 'Model fund structures across 15 jurisdictions. Free beta access.',
     images: ['/og-image.png'],
   },
-  
+
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon-16x16.png',
     apple: '/apple-touch-icon.png',
   },
-  
+
   robots: {
     index: true,
     follow: true,
@@ -52,9 +55,9 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  
+
   alternates: {
-    canonical: 'https://gnconew.vercel.app',
+    canonical: BASE_URL,
   },
 }
 
@@ -67,6 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <LayoutNavigation />
           <LayoutPageFrame>{children}</LayoutPageFrame>
           <DisclaimerFooterBar />
+          <CookieBanner />
         </PrivacyModeProvider>
       </body>
     </html>

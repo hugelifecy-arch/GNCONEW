@@ -41,7 +41,7 @@ const sections = [
   },
   {
     title: 'Contact Information',
-    body: 'For legal, compliance, or privacy inquiries, contact legal@gnco.ai. For security matters, include “Security Disclosure” in the subject line to support expedited routing.',
+    body: 'For legal, compliance, or privacy inquiries, contact legal@gnco.io. For security matters, include “Security Disclosure” in the subject line to support expedited routing.',
   },
 ]
 

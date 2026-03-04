@@ -1,5 +1,7 @@
 import { MetadataRoute } from 'next'
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://gnconew.vercel.app'
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -9,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/architect', '/dashboard', '/signin', '/api/'],
       },
     ],
-    sitemap: 'https://gnconew.vercel.app/sitemap.xml',
-    host: 'https://gnconew.vercel.app',
+    sitemap: `${BASE_URL}/sitemap.xml`,
+    host: BASE_URL,
   }
 }

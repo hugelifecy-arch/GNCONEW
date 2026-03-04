@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
+import { DataVersionBadge } from '@/components/ui/DataVersionBadge'
 import {
   CartesianGrid,
   Legend,
@@ -527,7 +528,7 @@ export function InstantCostCalculator() {
                     </div>
                     <div className="mt-2 flex items-center gap-4 text-sm text-text-secondary">
                       <span>
-                        <Citation source="Service provider estimates" url="https://gnco.ai/methodology" marker="1">
+                        <Citation source="Service provider estimates" url="/methodology" marker="1">
                           Formation: {formatCurrency(j.formationCost, true)}
                         </Citation>
                       </span>
@@ -535,7 +536,7 @@ export function InstantCostCalculator() {
                       <span>Annual: {formatCurrency(j.annualCost, true)}</span>
                       <span>•</span>
                       <span>
-                        <Citation source="Relevant regulator setup guidance" url="https://gnco.ai/coverage" marker="2">
+                        <Citation source="Relevant regulator setup guidance" url="/coverage" marker="2">
                           {j.timeline}
                         </Citation>
                       </span>
@@ -553,7 +554,7 @@ export function InstantCostCalculator() {
 
               <div className="mt-4">
                 <div className="mb-1 flex items-center justify-between text-xs text-text-secondary">
-                  <Citation source="GNCO methodology weighting framework" url="https://gnco.ai/methodology" marker="4">
+                  <Citation source="GNCO methodology weighting framework" url="/methodology" marker="4">
                     Suitability Score
                   </Citation>
                   <span className="font-semibold text-accent-gold">{j.score}/100</span>
@@ -565,6 +566,9 @@ export function InstantCostCalculator() {
                   />
                 </div>
                 <p className="mt-2 text-xs text-text-tertiary">{scoreContext}</p>
+                <div className="mt-2">
+                  <DataVersionBadge showLink={false} />
+                </div>
               </div>
             </div>
           ))}
@@ -661,8 +665,12 @@ export function InstantCostCalculator() {
           </p>
           <p className="mx-auto mt-5 max-w-3xl text-sm text-text-secondary">
             Cost projections are estimates based on market data as of {lastVerifiedDate}. Actual
-            costs vary. Consult service providers for binding quotes.
+            costs vary. Consult service providers for binding quotes.{' '}
+            <Link href="/methodology" className="text-accent-gold underline decoration-accent-gold/40 underline-offset-2 transition hover:text-accent-gold-light">View Methodology →</Link>
           </p>
+          <div className="mt-2 text-center">
+            <DataVersionBadge />
+          </div>
         </div>
       </div>
     </section>

@@ -17,9 +17,11 @@ export function MarketingFooter() {
           <h4 className="font-semibold text-text-primary">Platform</h4>
           <FooterLink href="/architect">Architect Engine</FooterLink>
           <FooterLink href="/coverage">Coverage</FooterLink>
+          <FooterLink href="/templates">Templates</FooterLink>
+          <FooterLink href="/use-cases">Use Cases</FooterLink>
           <FooterLink href="/methodology">Methodology</FooterLink>
+          <FooterLink href="/regulatory-updates">Regulatory Updates</FooterLink>
           <FooterLink href="/#pricing">Pricing</FooterLink>
-          <FooterLink href="/architect">Start Free →</FooterLink>
         </div>
 
         <div className="space-y-2">
@@ -28,6 +30,7 @@ export function MarketingFooter() {
           <FooterLink href="/privacy">Privacy Policy</FooterLink>
           <FooterLink href="/terms">Terms of Service</FooterLink>
           <FooterLink href="/data-architecture">Data Architecture</FooterLink>
+          <FooterLink href="/changelog">Changelog</FooterLink>
         </div>
 
         <div className="space-y-3">

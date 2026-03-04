@@ -198,7 +198,7 @@ export function ComparisonWorkspace() {
       key: 'formationCost',
       label: 'Formation cost (€)',
       render: (m) => (
-        <Citation source="Service provider estimates" url="https://gnco.ai/methodology" marker="1">
+        <Citation source="Service provider estimates" url="/methodology" marker="1">
           {formatPrivate(m.formationCost, 'currency')}
         </Citation>
       ),
@@ -208,7 +208,7 @@ export function ComparisonWorkspace() {
       key: 'timeline',
       label: 'Timeline to launch',
       render: (m) => (
-        <Citation source="Relevant regulator setup guidance" url="https://gnco.ai/coverage" marker="2">
+        <Citation source="Relevant regulator setup guidance" url="/coverage" marker="2">
           {m.timeline}
         </Citation>
       ),
@@ -218,7 +218,7 @@ export function ComparisonWorkspace() {
       key: 'lpWithholding',
       label: 'LP withholding tax (avg)',
       render: (m) => (
-        <Citation source="Relevant tax authority and treaty references" url="https://gnco.ai/disclosures" marker="3">
+        <Citation source="Relevant tax authority and treaty references" url="/disclosures" marker="3">
           {`${m.lpWithholding}%`}
         </Citation>
       ),

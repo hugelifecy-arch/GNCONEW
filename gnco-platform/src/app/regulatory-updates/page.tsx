@@ -1,4 +1,5 @@
 import { REGULATORY_UPDATES } from '@/data/regulatory-updates'
+import { DATA_VERSION } from '@/lib/dataVersion'
 import { RegulatoryUpdate, UpdateImpact } from '@/types/regulatory-update'
 
 const IMPACT_CONFIG: Record<UpdateImpact, { color: string; bg: string }> = {
@@ -45,7 +46,7 @@ export default function RegulatoryUpdatesPage() {
               color: '#9ca3af',
             }}
           >
-            {active.length} active updates · Last reviewed: 19 Feb 2026
+            {active.length} active updates · Last reviewed: {DATA_VERSION.lastUpdated} · {DATA_VERSION.label}
           </div>
         </div>
 

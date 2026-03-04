@@ -28,12 +28,12 @@ export default function CoverageDetailPage({ params }: { params: { slug: string 
           />
         </div>
         <p className="mt-4 text-sm text-text-secondary">
-          <Citation source="Service provider estimates" url="https://gnco.ai/methodology" marker="1">
+          <Citation source="Service provider estimates" url="/methodology" marker="1">
             Formation cost range: {coverage.formationCostRange}
           </Citation>
         </p>
         <p className="text-sm text-text-secondary">
-          <Citation source="Relevant regulator setup guidance" url="https://gnco.ai/coverage" marker="2">
+          <Citation source="Relevant regulator setup guidance" url="/coverage" marker="2">
             Formation timeline: {coverage.timelineRange}
           </Citation>
         </p>

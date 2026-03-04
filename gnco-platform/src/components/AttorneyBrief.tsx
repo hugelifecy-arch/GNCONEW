@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 
 import type { ArchitectBrief, FundStructureRecommendation } from '@/lib/types'
+import { track } from '@/lib/analytics'
 
 type AttorneyBriefProps = {
   brief: Partial<ArchitectBrief>
@@ -48,19 +49,19 @@ export function AttorneyBrief({ brief, recommendations }: AttorneyBriefProps) {
     })
 
     if (response.status === 401) {
-      setMessage('Please sign in to generate the Attorney Brief PDF.')
+      setMessage('Please sign in to generate the Attorney Brief.')
       setExporting(false)
       return
     }
 
     if (!response.ok) {
-      setMessage('Unable to generate PDF. Please try again.')
+      setMessage('Unable to generate brief. Please try again.')
       setExporting(false)
       return
     }
 
     const accessLevel = (response.headers.get('x-brief-access-level') as 'preview' | 'full' | null) ?? 'preview'
-    const filename = response.headers.get('x-brief-filename') ?? `gnco-attorney-brief-${new Date().toISOString().slice(0, 10)}.pdf`
+    const filename = response.headers.get('x-brief-filename') ?? `gnco-attorney-brief-${new Date().toISOString().slice(0, 10)}.docx`
     const blob = await response.blob()
 
     const url = URL.createObjectURL(blob)
@@ -72,7 +73,11 @@ export function AttorneyBrief({ brief, recommendations }: AttorneyBriefProps) {
     anchor.remove()
     URL.revokeObjectURL(url)
 
-    setMessage(accessLevel === 'preview' ? 'Preview PDF generated (page 1 only for free tier).' : 'Full Attorney Brief generated.')
+    track('brief_downloaded', {
+      jurisdiction: topThree[0]?.jurisdiction,
+      fund_size: formatSize(brief.fundSize),
+    })
+    setMessage(accessLevel === 'preview' ? 'Preview brief generated (summary only for free tier).' : 'Full Attorney Brief generated.')
     setExporting(false)
   }
 

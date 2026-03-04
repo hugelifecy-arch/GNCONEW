@@ -20,7 +20,12 @@ function getPosthogClient() {
   return window.posthog
 }
 
-export function initAnalytics() {
+function hasConsent(): boolean {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem('gnco_cookie_consent') === 'accepted'
+}
+
+function doInit() {
   if (typeof window === 'undefined' || !process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     return
   }
@@ -57,9 +62,25 @@ export function initAnalytics() {
   })
 }
 
-export function trackEvent(eventName: string, properties?: EventProperties) {
+export function initAnalytics() {
+  if (hasConsent()) {
+    doInit()
+  }
+
+  // Listen for consent granted after page load
+  if (typeof window !== 'undefined') {
+    window.addEventListener('gnco_consent_granted', () => {
+      doInit()
+    })
+  }
+}
+
+export function track(event: string, properties?: EventProperties) {
+  if (!hasConsent()) return
   const posthogClient = getPosthogClient()
   if (!posthogClient) return
-
-  posthogClient.capture(eventName, properties)
+  posthogClient.capture(event, properties)
 }
+
+// Keep old name as alias for backwards compatibility
+export const trackEvent = track

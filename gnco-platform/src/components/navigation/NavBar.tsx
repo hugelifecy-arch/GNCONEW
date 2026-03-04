@@ -10,9 +10,9 @@ import { MobileNav } from '@/components/navigation/MobileNav'
 
 const navLinks = [
   { label: 'Platform', href: '/architect' },
+  { label: 'Use Cases', href: '/use-cases' },
   { label: 'Coverage', href: '/coverage' },
   { label: 'Methodology', href: '/methodology' },
-  { label: 'Updates', href: '/regulatory-updates' },
   { label: 'Disclosures', href: '/disclosures' },
 ]
 

@@ -86,7 +86,7 @@ function stepNumber(step: number) {
 
 export function IntakeWizard() {
   const router = useRouter()
-  const { currentStep, goBack, goNext, updateBrief, briefData } = useWizard({ totalSteps: 9 })
+  const { currentStep, goBack, goNext, updateBrief, briefData, resetWizard } = useWizard({ totalSteps: 9 })
   const [direction, setDirection] = useState(1)
   const [countrySearch, setCountrySearch] = useState('')
   const [countryOpen, setCountryOpen] = useState(false)
@@ -120,7 +120,15 @@ export function IntakeWizard() {
   const filteredCountries = countries.filter((country) => country.toLowerCase().includes(countrySearch.toLowerCase()))
 
 
+  const hasTrackedStart = useRef(false)
   const hasTrackedCompletion = useRef(false)
+
+  useEffect(() => {
+    if (!hasTrackedStart.current) {
+      hasTrackedStart.current = true
+      trackEvent('architect_engine_started', { referrer: typeof document !== 'undefined' ? document.referrer : '' })
+    }
+  }, [])
 
   useEffect(() => {
     if (currentStep === 9 && !hasTrackedCompletion.current) {
@@ -168,6 +176,10 @@ export function IntakeWizard() {
 
   const proceed = () => {
     if (!canContinue) return
+    trackEvent('architect_step_completed', {
+      step_number: currentStep,
+      step_name: `step_${currentStep}`,
+    })
     setDirection(1)
     goNext()
   }
@@ -220,6 +232,12 @@ export function IntakeWizard() {
           })}
         </ol>
         <p className="mt-8 text-xs text-text-secondary">Your session is saved automatically.</p>
+        <button
+          onClick={resetWizard}
+          className="mt-3 text-xs text-text-tertiary transition hover:text-accent-gold"
+        >
+          Reset / Start Over
+        </button>
       </aside>
 
       <section className="relative flex min-h-[84vh] flex-1 flex-col">
