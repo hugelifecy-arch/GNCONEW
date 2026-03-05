@@ -101,14 +101,17 @@ function computeWeightedWht(jurisdiction: { id: string; taxTreaties: string[] },
   return weightedWht
 }
 
-export function scoreJurisdiction(jurisdiction: { id: string; taxTreaties: string[] }, inputs: ScoringInputs): number {
-  const baseScore = BASE_SCORES[jurisdiction.id] ?? 75
+export function scoreJurisdiction(jurisdiction: string | { id: string; taxTreaties: string[] }, inputs: ScoringInputs): number {
+  const id = typeof jurisdiction === 'string' ? jurisdiction : jurisdiction.id
+  const taxTreaties = typeof jurisdiction === 'string' ? [] : jurisdiction.taxTreaties
 
-  const strategyOffset = STRATEGY_OFFSETS[inputs.strategy][jurisdiction.id] ?? 0
+  const baseScore = BASE_SCORES[id] ?? 75
+
+  const strategyOffset = STRATEGY_OFFSETS[inputs.strategy][id] ?? 0
 
   const scalePenalty = inputs.fundSize >= 250 ? 2 : 0
   const lpComplexityPenalty = inputs.lpCount >= 30 ? 2 : 0
-  const weightedWht = inputs.lpMix ? computeWeightedWht(jurisdiction, inputs.lpMix) : null
+  const weightedWht = inputs.lpMix ? computeWeightedWht({ id, taxTreaties }, inputs.lpMix) : null
   const whtPenalty = weightedWht === null ? 0 : Math.max(0, (weightedWht - 10) * 0.7)
 
   return Math.max(40, Math.min(100, baseScore + strategyOffset - scalePenalty - lpComplexityPenalty - whtPenalty))

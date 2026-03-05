@@ -36,7 +36,7 @@ const tiers = [
       'Basic reporting',
       'Email support',
     ],
-    cta: { label: 'Join Waitlist →', href: 'mailto:contact@gnco.io?subject=Waitlist: Starter' },
+    cta: { label: 'Join Waitlist →', href: '/#pricing' },
     highlight: false,
   },
   {
@@ -53,7 +53,7 @@ const tiers = [
       'API access',
       'Priority support',
     ],
-    cta: { label: 'Join Waitlist →', href: 'mailto:contact@gnco.io?subject=Waitlist: Professional' },
+    cta: { label: 'Join Waitlist →', href: '/#pricing' },
     highlight: true,
   },
   {
@@ -69,7 +69,7 @@ const tiers = [
       'White-label reporting',
       'Dedicated CSM',
     ],
-    cta: { label: 'Join Waitlist →', href: 'mailto:contact@gnco.io?subject=Waitlist: Family Office' },
+    cta: { label: 'Join Waitlist →', href: '/#pricing' },
     highlight: false,
   },
   {
@@ -85,7 +85,7 @@ const tiers = [
       'Custom SLA',
       'Dedicated infrastructure',
     ],
-    cta: { label: 'Contact Sales →', href: 'mailto:contact@gnco.io?subject=Enterprise Inquiry' },
+    cta: { label: 'Contact Sales →', href: '/#pricing' },
     highlight: false,
   },
 ]

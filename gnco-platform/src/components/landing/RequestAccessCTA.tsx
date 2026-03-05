@@ -24,12 +24,20 @@ export function RequestAccessCTA() {
           structures in minutes.
         </p>
 
-        <Link
-          href="/architect"
-          className="mt-8 inline-block rounded-sm bg-accent-gold px-10 py-4 text-lg font-semibold text-bg-primary transition hover:bg-accent-gold-light"
-        >
-          Launch Architect Engine →
-        </Link>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/architect"
+            className="inline-block rounded-sm bg-accent-gold px-10 py-4 text-lg font-semibold text-bg-primary transition hover:bg-accent-gold-light"
+          >
+            Launch Architect Engine →
+          </Link>
+          <Link
+            href="/sample-brief"
+            className="inline-block rounded-sm border border-accent-gold/40 px-10 py-4 text-lg font-semibold text-accent-gold transition hover:bg-accent-gold/5"
+          >
+            View Sample Report →
+          </Link>
+        </div>
 
         <p className="mt-4 text-xs text-text-tertiary">
           Users get free lifetime access to core features when we launch paid plans in Q3 2026. Your feedback shapes the product.
