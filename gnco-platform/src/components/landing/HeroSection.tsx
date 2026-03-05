@@ -1,16 +1,53 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { JURISDICTIONS } from '@/lib/jurisdiction-data'
 
 const headlineWords = 'The Fund Structure Decision That Takes 6 Weeks — Made in 30 Minutes.'.split(' ')
 
+const TEMPLATE_BREAKDOWN = [
+  { category: 'Private Equity', count: 15 },
+  { category: 'Real Estate', count: 15 },
+  { category: 'Venture Capital', count: 12 },
+  { category: 'Private Credit', count: 10 },
+]
+
+function TemplateTooltip() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <span className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="underline decoration-accent-gold/40 underline-offset-4 transition hover:decoration-accent-gold"
+      >
+        52 Templates
+      </button>
+      {open && (
+        <span className="absolute left-1/2 top-full z-30 mt-3 w-64 -translate-x-1/2 rounded-md border border-bg-border bg-bg-elevated p-4 text-left text-sm shadow-xl">
+          <span className="mb-2 block font-semibold text-text-primary">Template Breakdown</span>
+          {TEMPLATE_BREAKDOWN.map((t) => (
+            <span key={t.category} className="block text-text-secondary">
+              {t.category} ({t.count})
+            </span>
+          ))}
+          <span className="mt-2 block text-xs text-text-tertiary">
+            Each template covers a specific jurisdiction + strategy combination.
+          </span>
+        </span>
+      )}
+    </span>
+  )
+}
+
 function StatsStrip() {
   return (
     <div className="mt-16 text-center">
       <p className="font-serif text-2xl text-accent-gold md:text-3xl">
-        {JURISDICTIONS.length} Jurisdictions · 52 Templates ·{' '}
+        {JURISDICTIONS.length} Jurisdictions · <TemplateTooltip /> ·{' '}
         Under 30 min — Avg. time to full recommendation ·{' '}
         <a href="https://ilpa.org/reporting-template/" target="_blank" rel="noopener noreferrer">
           ILPA-Aligned ↗
@@ -121,10 +158,10 @@ export function HeroSection() {
             Start Free →
           </Link>
           <Link
-            href="/methodology"
+            href="/sample-brief"
             className="w-full rounded-sm border border-accent-gold/40 px-8 py-4 text-accent-gold transition hover:bg-accent-gold/5 sm:w-auto"
           >
-            View Methodology →
+            View Sample Report →
           </Link>
         </motion.div>
 

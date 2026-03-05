@@ -8,12 +8,12 @@ import { JURISDICTIONS } from '@/lib/jurisdiction-data'
 import { track } from '@/lib/analytics'
 
 const scoringCriteria = [
-  { name: 'Cost Efficiency', weight: 25, description: 'Formation + 5-year operating cost vs. fund size' },
-  { name: 'Tax Efficiency', weight: 25, description: 'Treaty network quality, WHT rates for LP domicile mix' },
-  { name: 'Regulatory Burden', weight: 20, description: 'Formation complexity, ongoing compliance requirements' },
-  { name: 'LP Familiarity', weight: 15, description: 'How well-known/accepted this structure is with target LP types' },
-  { name: 'Formation Timeline', weight: 10, description: 'Weeks to operational fund' },
-  { name: 'Asset Geography Fit', weight: 5, description: 'Regulatory alignment with target asset locations' },
+  { name: 'Tax Efficiency', weight: 25, description: 'Treaty network strength, WHT rates, carried interest treatment' },
+  { name: 'Formation Cost', weight: 20, description: 'Legal + regulatory + notary fees' },
+  { name: 'Annual Operating Cost', weight: 15, description: 'Admin, audit, compliance, substance costs' },
+  { name: 'LP Familiarity', weight: 15, description: 'How well-known/trusted the jurisdiction is among LPs of the selected type' },
+  { name: 'Regulatory Burden', weight: 15, description: 'Reporting complexity, substance requirements, AIFMD status' },
+  { name: 'Formation Speed', weight: 10, description: 'Weeks from decision to operative structure' },
 ]
 
 const versionHistory = [

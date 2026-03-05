@@ -99,6 +99,7 @@ export function InstantCostCalculator() {
   const [lpMixRows, setLpMixRows] = useState<LPMixRow[]>([createLpMixRow(1)])
   const [fundLife, setFundLife] = useState<5 | 7 | 10>(5)
   const [aumGrowthRate, setAumGrowthRate] = useState<0 | 10 | 25>(10)
+  const [showAllJurisdictions, setShowAllJurisdictions] = useState(false)
   const reinvestmentRate = 3
 
   const lastVerifiedDate = 'February 19, 2026'
@@ -155,61 +156,56 @@ export function InstantCostCalculator() {
     [lpMixReady, lpMixRows, showLpMix]
   )
 
-  const topJurisdictions = useMemo(() => {
-    const scoredById = new Map(
-      JURISDICTIONS.map((j) => {
-        let formationCost = (j.formationCostRange.min + j.formationCostRange.max) / 2
+  const allScoredJurisdictions = useMemo(() => {
+    const strategyMultiplier: Record<FundStrategy, number> = {
+      'private-equity': 1,
+      'real-estate': 1.08,
+      'venture-capital': 0.94,
+      'private-credit': 1.12,
+    }
 
-        const strategyMultiplier: Record<FundStrategy, number> = {
-          'private-equity': 1,
-          'real-estate': 1.08,
-          'venture-capital': 0.94,
-          'private-credit': 1.12,
-        }
+    return JURISDICTIONS.map((j) => {
+      let formationCost = (j.formationCostRange.min + j.formationCostRange.max) / 2
+      formationCost *= strategyMultiplier[strategy]
+      if (fundSize > 250) formationCost *= 1.3
+      if (fundSize > 500) formationCost *= 1.5
+      formationCost += (lpCount - 10) * 500
 
-        formationCost *= strategyMultiplier[strategy]
+      let annualCost = (j.annualCostRange.min + j.annualCostRange.max) / 2
+      annualCost *= strategyMultiplier[strategy]
+      if (fundSize > 250) annualCost *= 1.2
 
-        if (fundSize > 250) formationCost *= 1.3
-        if (fundSize > 500) formationCost *= 1.5
+      const regulatoryCost = Math.round(
+        annualCost * (j.taxTreatyStrength === 'high' ? 0.08 : j.taxTreatyStrength === 'medium' ? 0.1 : 0.12)
+      )
 
-        formationCost += (lpCount - 10) * 500
+      const totalYear1 = formationCost + annualCost
 
-        let annualCost = (j.annualCostRange.min + j.annualCostRange.max) / 2
-        annualCost *= strategyMultiplier[strategy]
-        if (fundSize > 250) annualCost *= 1.2
+      const score = scoreJurisdiction(
+        { id: j.id, taxTreaties: j.taxTreaties },
+        { fundSize, lpCount, strategy, lpMix: scoringLpMix }
+      )
 
-        const regulatoryCost = Math.round(
-          annualCost * (j.taxTreatyStrength === 'high' ? 0.08 : j.taxTreatyStrength === 'medium' ? 0.1 : 0.12)
-        )
-
-        const totalYear1 = formationCost + annualCost
-
-        const score = scoreJurisdiction(
-          { id: j.id, taxTreaties: j.taxTreaties },
-          { fundSize, lpCount, strategy, lpMix: scoringLpMix }
-        )
-
-        return [
-          j.id,
-          {
-            id: j.id,
-            name: j.name,
-            flag: j.flag,
-            formationCost: Math.round(formationCost),
-            annualCost: Math.round(annualCost),
-            regulatoryCost,
-            totalYear1: Math.round(totalYear1),
-            score,
-            timeline: `${j.setupTimeWeeks.min}-${j.setupTimeWeeks.max} weeks`,
-          },
-        ] as const
-      })
-    )
-
-    return PREVIEW_JURISDICTIONS.map((jurisdictionId) => scoredById.get(jurisdictionId)).filter(
-      (jurisdiction): jurisdiction is NonNullable<typeof jurisdiction> => Boolean(jurisdiction)
-    )
+      return {
+        id: j.id,
+        name: j.name,
+        flag: j.flag,
+        formationCost: Math.round(formationCost),
+        annualCost: Math.round(annualCost),
+        regulatoryCost,
+        totalYear1: Math.round(totalYear1),
+        score,
+        timeline: `${j.setupTimeWeeks.min}-${j.setupTimeWeeks.max} weeks`,
+      }
+    }).sort((a, b) => a.totalYear1 - b.totalYear1)
   }, [fundSize, lpCount, scoringLpMix, strategy])
+
+  const topJurisdictions = useMemo(() => {
+    const scoredById = new Map(allScoredJurisdictions.map((j) => [j.id, j]))
+    return PREVIEW_JURISDICTIONS.map((id) => scoredById.get(id)).filter(
+      (j): j is NonNullable<typeof j> => Boolean(j)
+    )
+  }, [allScoredJurisdictions])
 
   const projectionData = useMemo(() => {
     return topJurisdictions.map((jurisdiction) => {
@@ -300,6 +296,20 @@ export function InstantCostCalculator() {
           <p className="text-lg text-text-secondary">
             Move the sliders to see real formation costs across jurisdictions
           </p>
+          <div className="mx-auto mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-text-tertiary">
+            <span className="font-semibold text-text-secondary">Scoring Criteria:</span>
+            <span>Tax Efficiency (25%)</span>
+            <span>·</span>
+            <span>Formation Cost (20%)</span>
+            <span>·</span>
+            <span>Annual Operating Cost (15%)</span>
+            <span>·</span>
+            <span>LP Familiarity (15%)</span>
+            <span>·</span>
+            <span>Regulatory Burden (15%)</span>
+            <span>·</span>
+            <span>Formation Speed (10%)</span>
+          </div>
         </div>
 
         <div className="mb-8 rounded-lg border border-bg-border bg-bg-elevated p-8">
@@ -573,6 +583,58 @@ export function InstantCostCalculator() {
             </div>
           ))}
         </div>
+
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => setShowAllJurisdictions((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-sm border border-bg-border px-6 py-3 text-sm font-semibold text-text-primary transition hover:border-accent-gold hover:text-accent-gold"
+          >
+            {showAllJurisdictions ? 'Collapse' : `Show all ${JURISDICTIONS.length} jurisdictions`} →
+          </button>
+        </div>
+
+        {showAllJurisdictions && (
+          <div className="mt-6 overflow-x-auto rounded-lg border border-bg-border bg-bg-elevated p-6">
+            <h3 className="mb-4 font-serif text-xl text-text-primary">
+              All {JURISDICTIONS.length} Jurisdictions — Sorted by Year 1 Total Cost
+            </h3>
+            <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-bg-border text-text-secondary">
+                  <th className="py-2 pr-4">#</th>
+                  <th className="py-2 pr-4">Jurisdiction</th>
+                  <th className="py-2 pr-4">Formation</th>
+                  <th className="py-2 pr-4">Annual</th>
+                  <th className="py-2 pr-4">Year 1 Total</th>
+                  <th className="py-2 pr-4">Timeline</th>
+                  <th className="py-2">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allScoredJurisdictions.map((j, idx) => (
+                  <tr
+                    key={j.id}
+                    className={`border-b border-bg-border/70 text-text-primary ${idx < 3 ? 'bg-accent-gold/5' : ''}`}
+                  >
+                    <td className="py-3 pr-4 text-text-tertiary">{idx + 1}</td>
+                    <td className="py-3 pr-4">
+                      <span className="mr-2">{j.flag}</span>
+                      {j.name}
+                    </td>
+                    <td className="py-3 pr-4">{formatCurrency(j.formationCost, true)}</td>
+                    <td className="py-3 pr-4">{formatCurrency(j.annualCost, true)}</td>
+                    <td className="py-3 pr-4 font-semibold text-accent-gold">
+                      {formatCurrency(j.totalYear1, true)}
+                    </td>
+                    <td className="py-3 pr-4">{j.timeline}</td>
+                    <td className="py-3">{j.score}/100</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="mt-10 rounded-lg border border-bg-border bg-bg-elevated p-6">
           <h3 className="font-serif text-2xl text-text-primary">5-Year Total Cost Projection</h3>
