@@ -77,7 +77,17 @@ const priorityOptions: { id: Priority; label: string }[] = [
 ]
 
 const countries = [
-  'United States','Canada','Mexico','Brazil','Argentina','United Kingdom','Ireland','Luxembourg','Netherlands','France','Germany','Spain','Italy','Switzerland','Jersey','Guernsey','Cayman Islands','British Virgin Islands','Bermuda','UAE','Saudi Arabia','Qatar','Bahrain','Kuwait','Egypt','South Africa','Mauritius','India','Singapore','Hong Kong','China','Japan','South Korea','Australia','New Zealand','Indonesia','Malaysia','Thailand','Vietnam','Philippines','Taiwan','Turkey','Israel','Portugal','Belgium','Sweden','Norway','Denmark','Finland','Austria',
+  'United States','Canada','Mexico','Brazil','Argentina','Chile','Colombia','Peru',
+  'United Kingdom','Ireland','Luxembourg','Netherlands','France','Germany','Spain','Italy','Switzerland',
+  'Jersey','Guernsey','Cayman Islands','British Virgin Islands','Bermuda',
+  'Cyprus','Malta','Greece','Czech Republic','Poland','Romania','Hungary','Croatia','Estonia','Latvia','Lithuania','Slovakia','Slovenia','Bulgaria','Iceland','Liechtenstein','Monaco','Andorra',
+  'Portugal','Belgium','Sweden','Norway','Denmark','Finland','Austria',
+  'UAE','Saudi Arabia','Qatar','Bahrain','Kuwait','Oman','Jordan','Lebanon','Egypt',
+  'South Africa','Mauritius','Nigeria','Kenya','Ghana','Morocco','Tunisia',
+  'India','Singapore','Hong Kong','China','Japan','South Korea','Australia','New Zealand',
+  'Indonesia','Malaysia','Thailand','Vietnam','Philippines','Taiwan','Sri Lanka','Bangladesh','Pakistan',
+  'Turkey','Israel','Georgia','Kazakhstan',
+  'Russia','Ukraine',
 ]
 
 function stepNumber(step: number) {
