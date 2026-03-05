@@ -1,6 +1,6 @@
 # GNCO — Architect Engine & Results Page
 # Claude Code Fix Playbook
-# Generated: March 2026
+# Generated: March 2026 | Updated: March 2026 (v2 — codebase-verified)
 
 ---
 
@@ -8,7 +8,36 @@
 
 Paste each prompt block directly into Claude Code in sequence.
 Complete and verify each fix before moving to the next.
-Prompts are ordered by priority: Critical → Data/Accuracy → UX → Enhancements.
+Prompts are ordered by priority: Critical > Data/Accuracy > UX > Enhancements.
+
+### Codebase Context (verified)
+
+The GNCO platform is a Next.js App Router application located at `gnco-platform/`.
+
+**Key architecture details:**
+- The wizard is a single monolithic component: `src/components/architect/IntakeWizard.tsx` (500 lines, all 8 steps inline)
+- There is a separate `WizardStep.tsx` component but it is a **stub placeholder** (3 lines, not used)
+- Wizard state is managed by a custom hook: `src/hooks/useWizard.ts` using `localStorage` (`gnco:architect-brief`) and `sessionStorage` (`gnco:architect-step`)
+- The results page delegates to: `src/components/architect/ArchitectResultsClient.tsx`
+- There is a separate `RecommendationPanel.tsx` with richer results UI (score bars, LP tax modeler, PDF/Excel export, BookCallCTA) but it is **not rendered** by the current `ArchitectResultsClient.tsx` — the results client has its own simpler inline rendering
+- Scoring logic lives in: `src/lib/architect-logic.ts` (`generateRecommendations()`)
+- A second scoring module exists: `src/lib/jurisdiction-scoring.ts` (`scoreJurisdiction()`) — used separately, not by the wizard results
+- Jurisdiction data: `src/lib/jurisdiction-data.ts` (16 jurisdictions, each with `lastUpdated`, `dataVersion`, `sourceNote` fields already present)
+- Type definitions: `src/lib/types.ts` (defines `FundStrategy`, `ArchitectBrief`, `JurisdictionProfile`, `FundStructureRecommendation`, etc.)
+- Demo user label: `src/components/shared/DemoDatasetNotice.tsx` (inline amber banner)
+- Sidebar user label: `src/components/navigation/AppSidebar.tsx` (shows "AD" avatar + "Demo User" text at bottom)
+- PDF generation utility: `src/lib/pdf.ts` (raw PDF builder — `buildSimplePdf()`, `buildAttorneyBriefPdf()`)
+- Email capture / attorney brief gate: `src/components/architect/EmailCaptureForm.tsx`
+- BookCallCTA component: `src/components/architect/BookCallCTA.tsx` (Calendly link, "FREE Launch Offer")
+
+**Fund types currently in Step 1** (8 types):
+`private-equity`, `real-estate`, `private-credit`, `venture-capital`, `real-assets`, `multi-strategy`, `co-investment`, `continuation-fund`
+
+**LP profiles currently in Step 4** (8 options — geography + type mixed):
+`us-taxable`, `us-tax-exempt`, `european`, `middle-eastern`, `asian`, `family-office`, `sovereign-wealth`, `mixed`
+
+**The wizard has 8 steps** (tracked as steps 1-8, with step 9 triggering redirect to results):
+1. Fund Type, 2. Fund Size, 3. GP Domicile, 4. LP Base, 5. Investment Geography, 6. Priorities, 7. Timeline, 8. Experience
 
 ---
 
@@ -23,39 +52,51 @@ Prompts are ordered by priority: Critical → Data/Accuracy → UX → Enhanceme
 ## FIX 01 — Results Page: Demo Fallback State
 **Problem:** `/architect/results` shows a dead-end error when accessed directly without wizard session data. This is the worst possible first impression for institutional prospects.
 
+**Affected file:** `src/components/architect/ArchitectResultsClient.tsx` (lines 86-94, the `if (!brief)` block)
+
 ```
-Find the file that renders `/architect/results` (likely app/architect/results/page.tsx or similar).
+In src/components/architect/ArchitectResultsClient.tsx, find the empty state block at ~line 86:
 
-Currently, when no wizard session/state is found, the page renders only:
-"No wizard input found. Complete the architect wizard first."
+  if (!brief) {
+    return (
+      <main className="mx-auto max-w-5xl space-y-6 px-6 py-14">
+        <h1 className="font-serif text-4xl">Architect Results</h1>
+        <p className="text-text-secondary">No wizard input found. Complete the architect wizard first.</p>
+        <Link href="/architect" className="text-accent-gold">Go to Architect Wizard →</Link>
+      </main>
+    )
+  }
 
-Replace this empty error state with a fully populated DEMO fallback that automatically activates when no session data exists.
+Replace this with a fully populated DEMO fallback that automatically activates when no session data exists.
 
 The demo fallback should:
-1. Show a realistic sample results output using these hardcoded demo inputs:
-   - Fund Type: Private Equity
-   - Fund Size: $250M
-   - GP Domicile: United States
-   - LP Base: Mixed (US Taxable + US Tax-Exempt + European)
-   - Investment Geography: North America + Western Europe
-   - Priorities: Tax Efficiency, Regulatory Reputation, Moderate Cost
-   - Timeline: 6 months
-   - Experience: Experienced GP (2+ prior funds)
+1. Create a hardcoded demo brief object matching the ArchitectBrief type from src/lib/types.ts:
+   {
+     strategy: 'private-equity' as FundStrategy,
+     fundSize: '250m-1b' as FundSize,
+     gpDomicile: 'United States',
+     lpProfile: ['us-taxable', 'us-tax-exempt', 'european'] as LPProfile[],
+     assetGeography: ['North America', 'Europe'],
+     priorities: ['tax-efficiency', 'lp-familiarity', 'cost-of-formation', 'speed-to-close', 'regulatory-simplicity', 'privacy', 'fundraising-flexibility'] as Priority[],
+     timeline: '6-months',
+     experience: 'experienced',
+   }
 
-2. Display a top-banner notice: 
+2. Call generateRecommendations(demoBrief, JURISDICTIONS) (already imported) to generate real scored results from the demo inputs.
+
+3. Display a top-banner notice:
    "You are viewing a sample result. Start the Architect Wizard to generate your personalised analysis →"
-   Style this as a subtle amber/gold info banner, NOT a blocking modal.
+   Style this as a subtle amber/gold info banner (use the existing accent-gold color tokens), NOT a blocking modal. Link "Start the Architect Wizard" to /architect.
 
-3. Show at least 4 jurisdiction recommendations in the results (e.g., Cayman Islands SLP, Delaware LP, Luxembourg SCSp, BVI LP) with:
-   - Suitability score (0–100)
-   - Estimated formation cost range
-   - Estimated formation timeline
-   - 3 key advantages
-   - 1 key consideration/risk
+4. Render the full results layout (same as the existing results rendering below the if-block) using the demo data — including the top 3 jurisdiction cards, trade-off sliders, methodology section, and red flag engine.
 
-4. Keep the existing disclaimer footer intact.
+5. Keep the existing disclaimer footer (DataVersionBadge) intact.
 
-5. Do NOT redirect away from the page — always render the demo fallback in place.
+6. Do NOT redirect away from the page — always render the demo fallback in place.
+
+NOTE: The existing ArchitectResultsClient only shows 3 jurisdiction cards with basic info. The richer RecommendationPanel component in src/components/architect/RecommendationPanel.tsx is NOT currently wired up. You can either:
+  (a) Wire up RecommendationPanel for both demo and real results, OR
+  (b) Keep the simpler inline rendering but ensure demo data flows through it.
 ```
 
 ---
@@ -63,21 +104,23 @@ The demo fallback should:
 ## FIX 02 — Results Page: "Back" CTA on Empty State
 **Problem:** The current error state has only one CTA ("Go to Architect Wizard →"). If a user arrived via a shared link, they have no context.
 
+**Affected file:** `src/components/architect/ArchitectResultsClient.tsx` (lines 86-94)
+
 ```
-On the `/architect/results` page, when no session data exists AND before the demo fallback from FIX 01 is complete, update the current empty error state UI as follows:
+On the /architect/results page, when no session data exists AND before the demo fallback from FIX 01 is complete, update the current empty error state UI as follows:
 
 1. Replace the plain "No wizard input found" text with a structured layout:
    - Headline: "Your Results Will Appear Here"
-   - Subheading: "Complete the 8-step Architect Wizard to receive your personalised jurisdiction analysis across 15 fund domiciles."
+   - Subheading: "Complete the 8-step Architect Wizard to receive your personalised jurisdiction analysis across 16 fund domiciles."
    - Primary CTA button: "Start the Architect Wizard →" (links to /architect)
    - Secondary text: "Want to see a sample? View Demo Results" (triggers the demo fallback mode from FIX 01)
 
-2. Add 3 icon+text value proposition bullets below:
-   - "15 jurisdictions modelled in real time"
-   - "Cost, timeline & tax efficiency scoring"
-   - "Export-ready PDF report"
+2. Add 3 icon+text value proposition bullets below (use lucide-react icons — already installed):
+   - Globe icon: "16 jurisdictions modelled in real time"
+   - Coins icon: "Cost, timeline & tax efficiency scoring"
+   - FileText icon: "Export-ready PDF report"
 
-Keep the disclaimer footer visible.
+Keep the disclaimer footer visible (DataVersionBadge component).
 ```
 
 ---
@@ -85,23 +128,37 @@ Keep the disclaimer footer visible.
 ## FIX 03 — Wizard Step 1: Add Missing Fund Types
 **Problem:** "Hedge Fund / Open-Ended" and "Fund of Funds" are absent from Step 1. Users attempting to structure these will get completely wrong jurisdiction recommendations.
 
+**Affected files:**
+- `src/lib/types.ts` — add new values to `FundStrategy` union type
+- `src/components/architect/IntakeWizard.tsx` — add to `step1Options` array (~line 38)
+- `src/lib/architect-logic.ts` — may need scoring adjustments for new types
+
 ```
-In the Architect Wizard Step 1 component (Fund Type selection), add two new fund type options to the existing grid alongside Private Equity, Real Estate, etc.:
+1. In src/lib/types.ts, extend the FundStrategy type to add:
+   | 'hedge-fund'
+   | 'fund-of-funds'
+
+2. In src/components/architect/IntakeWizard.tsx, add two new entries to the step1Options array (currently at ~line 38-47):
 
 NEW OPTION A:
-- Name: "Hedge Fund"
-- Subtitle: "Open-ended liquid and multi-strategy vehicles"
-- Icon: use an appropriate existing icon or a simple chart/wave icon
+- value: 'hedge-fund'
+- label: 'Hedge Fund'
+- description: 'Open-ended liquid and multi-strategy vehicles'
+- icon: LineChart (already imported from lucide-react)
 
 NEW OPTION B:
-- Name: "Fund of Funds"
-- Subtitle: "Diversified allocations to underlying fund managers"
-- Icon: use a layered/stack icon
+- value: 'fund-of-funds'
+- label: 'Fund of Funds'
+- description: 'Diversified allocations to underlying fund managers'
+- icon: Layers (already imported from lucide-react)
 
-Additionally, add a notice at the bottom of Step 1 (above the Continue button):
+Note: LineChart and Layers are already imported in IntakeWizard.tsx but Layers is already used for multi-strategy. Use a different icon for one of them — import "BarChart3" or "Network" from lucide-react for Fund of Funds.
+
+3. Add a notice at the bottom of Step 1 (inside the currentStep === 1 block, after the grid div, before the closing fragment):
 "GNCO models closed-end and open-end fund structures. Hedge Fund and UCITS structures follow separate regulatory pathways — results will reflect open-ended jurisdiction suitability."
 
-Make sure both new types propagate correctly through all 8 wizard steps and into the results/scoring logic. If the scoring logic for these two types is not yet built, flag them as "Beta" with a badge and show a message on the results page: "Hedge Fund / FoF structuring recommendations are in beta. Results are indicative only."
+4. In src/lib/architect-logic.ts, review the applyBriefRules function. The scoring logic currently does not branch on strategy except for 'real-estate' (Cyprus bonus at ~line 87). Add basic handling for hedge-fund and fund-of-funds, or flag them as "Beta" with a badge on the results page:
+"Hedge Fund / FoF structuring recommendations are in beta. Results are indicative only."
 ```
 
 ---
@@ -109,18 +166,22 @@ Make sure both new types propagate correctly through all 8 wizard steps and into
 ## FIX 04 — Wizard Step 1: Continuation Fund Conflict Warning
 **Problem:** Continuation funds have mandatory LP conflict-of-interest disclosures and ILPA guidance implications. No warning exists.
 
-```
-On Wizard Step 1, when the user selects "Continuation Fund", trigger an inline contextual alert directly below the selected card (do not use a blocking modal):
+**Affected file:** `src/components/architect/IntakeWizard.tsx` — inside the `currentStep === 1` block (~line 266-289)
 
-Alert style: amber warning box
+```
+In IntakeWizard.tsx, inside the currentStep === 1 block, after the fund type grid (after the closing </div> of the grid at ~line 288), add a conditional inline alert:
+
+When brief.strategy === 'continuation-fund', render an inline contextual alert:
+
+Alert style: amber warning box using existing Tailwind tokens (border-accent-gold/30 bg-accent-gold/10 text-accent-gold)
 Alert content:
   Heading: "Continuation Fund — Key Consideration"
   Body: "GP-led continuation vehicles involve inherent LP conflicts of interest. ILPA guidelines recommend independent LP advisory committee consent and third-party fairness opinions. GNCO's recommendations assume these governance requirements will be addressed with qualified legal counsel before formation."
-  Link: "Learn more about ILPA Continuation Fund Guidelines →" (open in new tab, link to https://ilpa.org)
+  Link: "Learn more about ILPA Continuation Fund Guidelines →" (open in new tab, href="https://ilpa.org", rel="noopener noreferrer")
 
 The alert should:
-- Appear when "Continuation Fund" is selected/highlighted
-- Disappear if the user selects a different fund type
+- Appear when brief.strategy === 'continuation-fund'
+- Disappear if the user selects a different fund type (reactive via brief.strategy state)
 - NOT block the user from continuing — it is informational only
 ```
 
@@ -129,33 +190,54 @@ The alert should:
 ## FIX 05 — Wizard Step 1: Fix Co-Investment Description
 **Problem:** Co-Investment is described only as "Deal-by-deal capital sleeves" — missing dedicated co-invest fund structures which have different jurisdiction logic.
 
-```
-Update the Co-Investment fund type card on Wizard Step 1:
+**Affected file:** `src/components/architect/IntakeWizard.tsx` — step1Options array (~line 45)
 
-Change the subtitle from:
-"Deal-by-deal capital sleeves"
+```
+1. In IntakeWizard.tsx, update the co-investment entry in step1Options (line ~45):
+
+Change:
+{ value: 'co-investment', label: 'Co-Investment', description: 'Deal-by-deal capital sleeves', icon: Banknote },
 
 To:
-"Deal-by-deal sleeves and dedicated co-invest funds"
+{ value: 'co-investment', label: 'Co-Investment', description: 'Deal-by-deal sleeves and dedicated co-invest funds', icon: Banknote },
 
-Then, when "Co-Investment" is selected, show an inline prompt (small, non-blocking, below the card):
+2. Then, in the currentStep === 1 block, when brief.strategy === 'co-investment', show an inline prompt below the grid:
 "Are you structuring a deal-by-deal sleeve or a dedicated committed-capital co-invest fund?"
-With two radio options: "Deal-by-deal" | "Dedicated committed capital"
+With two radio-style buttons: "Deal-by-deal" | "Dedicated committed capital"
 
-Store this selection as a sub-type in the wizard state (e.g., coInvestType: 'deal-by-deal' | 'dedicated') and pass it through to the results scoring logic, as these have meaningfully different jurisdiction recommendations.
+Store this selection using updateBrief({ coInvestType: 'deal-by-deal' | 'dedicated' }).
+
+Note: You will need to extend the ArchitectBrief interface in src/lib/types.ts to add:
+  coInvestType?: 'deal-by-deal' | 'dedicated'
+
+Pass this through to the results scoring logic in architect-logic.ts.
 ```
 
 ---
 
 ## FIX 06 — Wizard Step 1: Back Button on Step 1
-**Problem:** Step 1 shows a "Back" button that has no valid destination.
+**Problem:** Step 1 shows a "Back" button that is disabled but still visible.
+
+**Affected file:** `src/components/architect/IntakeWizard.tsx` (~line 483-485)
 
 ```
-On Wizard Step 1, hide the "Back" button entirely when currentStep === 1.
+In IntakeWizard.tsx, find the Back button in the sticky bottom bar (~line 484):
 
-Alternatively, if a landing/intro page exists at /architect/intro or similar, route the Back button there.
+<button onClick={back} disabled={currentStep === 1} className="flex items-center gap-1 text-sm disabled:opacity-40">
+  <ChevronLeft className="h-4 w-4" /> Back
+</button>
 
-Do not show a Back button with no valid destination — it signals broken navigation to institutional users.
+The button is currently disabled with opacity-40 when currentStep === 1. This is better than nothing, but for institutional credibility, hide it entirely:
+
+Change to:
+{currentStep > 1 && (
+  <button onClick={back} className="flex items-center gap-1 text-sm">
+    <ChevronLeft className="h-4 w-4" /> Back
+  </button>
+)}
+{currentStep === 1 && <div />}
+
+The empty <div /> preserves the flex justify-between spacing.
 ```
 
 ---
@@ -168,123 +250,148 @@ Do not show a Back button with no valid destination — it signals broken naviga
 
 ---
 
-## FIX 07 — Add Jurisdiction Data Timestamps
-**Problem:** Formation cost and timeline data is undated. Fund formation costs change annually. Without timestamps, institutional users cannot rely on any figure.
+## FIX 07 — Add Jurisdiction Data Timestamps to Results UI
+**Problem:** Formation cost and timeline data is undated on the results page. The jurisdiction data already has `lastUpdated` and `dataVersion` fields, but the Results page doesn't display them per-jurisdiction.
+
+**Affected files:**
+- `src/components/architect/ArchitectResultsClient.tsx` — add per-jurisdiction date display
+- `src/lib/jurisdiction-data.ts` — data already has `lastUpdated: '2026-02-19'` fields (verified)
 
 ```
-Find the jurisdiction data store (likely a constants file, JSON, or TypeScript object — e.g., jurisdictions.ts, jurisdictionData.ts, or similar).
+The jurisdiction data in src/lib/jurisdiction-data.ts already includes:
+  - lastUpdated: '2026-02-19' (per jurisdiction)
+  - dataVersion: '2.1'
+  - sourceNote: 'Aggregated service provider quotes + [regulator] fee schedule'
 
-For each jurisdiction in the dataset, add a `dataVerifiedDate` field in ISO format (e.g., "2025-Q4" or "2025-11-01").
+These fields are NOT currently shown on the results page.
 
-Then, on the Results page, display this date beneath each jurisdiction's cost/timeline figures:
-"Cost & timeline data verified: [dataVerifiedDate]"
+In ArchitectResultsClient.tsx, for each jurisdiction card in the topThree.map() section (~line 104-111):
 
-Style as small muted text (gray, 12px) below the figures.
+1. Look up the full jurisdiction profile from JURISDICTIONS (already imported) by matching result.jurisdiction to j.name.
 
-Additionally, add a global note in the Results page header:
-"Jurisdiction data is reviewed quarterly. Formation costs and regulatory timelines are subject to change. Always verify current figures with local counsel."
+2. Below the reasoning text, add:
+   "Cost & timeline data verified: [jurisdiction.lastUpdated]"
+   Style as small muted text (text-xs text-text-tertiary).
 
-If the dataVerifiedDate is more than 6 months old, show a subtle amber indicator next to that jurisdiction's figures: "⚠ Data may be outdated — verify with local counsel"
+3. If the lastUpdated date is more than 6 months old (compare against current date), show:
+   "⚠ Data may be outdated — verify with local counsel" in amber (text-accent-gold).
+
+4. Add a global note in the results page header section (~line 98-101), below the existing subtitle:
+   "Jurisdiction data is reviewed quarterly. Formation costs and regulatory timelines are subject to change. Always verify current figures with local counsel."
+   Style as text-xs text-text-tertiary.
 ```
 
 ---
 
 ## FIX 08 — Architect Engine: Expose Scoring Methodology
-**Problem:** Jurisdiction suitability scores (0–100) are unauditable. Institutional investors and their counsel will not trust black-box scores.
+**Problem:** Jurisdiction suitability scores (0-100) are unauditable. Institutional investors and their counsel will not trust black-box scores.
+
+**Affected files:**
+- `src/components/architect/ArchitectResultsClient.tsx` — add expandable score breakdown
+- `src/lib/architect-logic.ts` — scoring model reference (weights are in BASE_WEIGHTS array: [3, 2, 1.5, 1.2, 1])
 
 ```
-Find the Architect Engine scoring logic (likely a function like calculateScore(), scoreJurisdiction(), or similar in a file like architectEngine.ts or scoringModel.ts).
+The scoring model in src/lib/architect-logic.ts works as follows:
+- buildBaseScore() generates per-dimension scores (0-100) for: taxEfficiency, lpFamiliarity, regulatorySimplicity, speedToClose, costScore, privacyScore
+- applyBriefRules() adjusts scores based on the user's brief inputs
+- weightedOverallScore() applies priority-based weighting using BASE_WEIGHTS = [3, 2, 1.5, 1.2, 1] mapped to the user's ranked priorities
 
-Make the following changes:
+The FundStructureRecommendation type already includes a full `scores: JurisdictionScore` object with all 6 dimensions plus overallScore. These scores are available in ArchitectResultsClient but NOT displayed.
 
-1. For each jurisdiction score on the Results page, add an expandable "Score Breakdown" section (collapsed by default, expand on click).
+1. In ArchitectResultsClient.tsx, for each jurisdiction card in the topThree section, add an expandable "Score Breakdown" section (collapsed by default, expand on click):
 
-The breakdown should show the weighted components, for example:
-  - Tax Efficiency: [score]/25
-  - Regulatory Reputation: [score]/20
-  - Formation Cost: [score]/20
-  - Formation Speed: [score]/15
-  - LP Familiarity: [score]/10
-  - Ongoing Compliance: [score]/10
-  (Adjust categories to match your actual scoring model)
+The breakdown should show:
+  - Tax Efficiency: [scores.taxEfficiency]/100
+  - LP Familiarity: [scores.lpFamiliarity]/100
+  - Regulatory Simplicity: [scores.regulatorySimplicity]/100
+  - Speed to Close: [scores.speedToClose]/100
+  - Cost Score: [scores.costScore]/100
+  - Privacy: [scores.privacyScore]/100
+  - Overall (weighted): [scores.overallScore]
 
-2. Add a small "ⓘ How scores are calculated" link in the Results page header, linking to /methodology or opening a modal with a plain-English explanation of the scoring model.
+2. The existing "Why this ranked #1" section (~line 126-137) already mentions methodology weights. Enhance it with a link:
+   "How scores are calculated" linking to /methodology (page already exists at src/components/marketing/MethodologyPageClient.tsx).
 
-3. The methodology explanation should include:
-   - What factors are weighted
-   - What the percentage weightings are
-   - That scores are relative (benchmarked against the 15 modelled jurisdictions, not absolute)
-   - That scores are customised based on wizard inputs (a different GP profile will produce different scores for the same jurisdiction)
+3. Add to the methodology explanation:
+   - Scores are relative (benchmarked against the 16 modelled jurisdictions)
+   - Scores are customised based on wizard inputs (a different GP profile produces different scores)
+   - Priority ranking determines weighting: #1 priority gets 3x weight, #2 gets 2x, #3 gets 1.5x, etc.
 ```
 
 ---
 
 ## FIX 09 — Wizard Step 4: LP Base — Add Investor Type Dimension
-**Problem:** Step 4 (LP Base) likely only asks about LP geography. But LP *type* (taxable individual, pension/endowment, sovereign wealth fund, insurance company) fundamentally changes jurisdiction suitability — especially around blocker entity requirements.
+**Problem:** Step 4 (LP Base) mixes geography and investor type in a flat list. LP *type* (taxable individual, pension/endowment, sovereign wealth fund, insurance company) fundamentally changes jurisdiction suitability.
+
+**Affected files:**
+- `src/components/architect/IntakeWizard.tsx` — Step 4 block (~line 353-375)
+- `src/lib/types.ts` — may need new type for LP investor types
+- `src/lib/architect-logic.ts` — scoring adjustments
 
 ```
-In Wizard Step 4 (LP Base), add a second dimension to the existing geography selection:
+Currently, Step 4 in IntakeWizard.tsx (~line 353-375) shows a flat grid of 8 LP profile options that mix geography and type:
+us-taxable, us-tax-exempt, european, middle-eastern, asian, family-office, sovereign-wealth, mixed
 
-After the user selects LP geographies, add a follow-up sub-step or inline section:
+These are already stored as brief.lpProfile (LPProfile[]) and used in architect-logic.ts for scoring.
+
+The existing options already cover some investor types (family-office, sovereign-wealth, us-tax-exempt). However, key types are missing. Add a second selection section within Step 4:
+
+After the current LP geography/type grid, add:
 Heading: "What types of investors will your LP base include?"
 (Select all that apply)
 
-Options:
-- Taxable Individuals / Family Offices
-- US Tax-Exempt (Pension Funds, Endowments, Foundations) [show tooltip: "May require blocker entities to avoid UBTI"]
-- Sovereign Wealth Funds [show tooltip: "May require specific structuring for political sensitivity and FOIA considerations"]
-- Insurance Companies [show tooltip: "Often subject to 'look-through' asset rules"]
-- Non-US Institutional (Banks, Pension Funds)
-- Retail / High-Net-Worth (non-qualified)
+Options (add as a new lpInvestorTypes field, or integrate as tooltips on existing options):
+- For "US Tax-Exempt": add tooltip: "May require blocker entities to avoid UBTI"
+- For "Sovereign Wealth": add tooltip: "May require specific structuring for political sensitivity and FOIA considerations"
+- New option: "Insurance Companies" with tooltip: "Often subject to 'look-through' asset rules"
+- New option: "Retail / High-Net-Worth (non-qualified)"
 
-Pass these LP types into the scoring engine. At minimum, use them to:
-1. Flag when a Cayman blocker is recommended (triggered by: US Tax-Exempt LPs investing in operating companies)
-2. Flag when AIFMD marketing passport is relevant (triggered by: Non-US Institutional from EU countries)
+At minimum, use the existing lpProfile selections to:
+1. Flag when a Cayman blocker is recommended (already partially done in redFlagRules in ArchitectResultsClient — rule rf-1)
+2. Flag when AIFMD marketing passport is relevant (already partially done — rule rf-5)
 3. Flag when FATCA/CRS reporting obligations are elevated (triggered by: mixed US + non-US LP base)
 ```
 
 ---
 
 ## FIX 10 — Wizard Step 7: Timeline — Add Regulator Backlog Warnings
-**Problem:** Static timeline estimates don't reflect current regulator processing times, which have shifted significantly since 2022.
+**Problem:** Static timeline estimates don't reflect current regulator processing times. The jurisdiction data has setupTimeWeeks but these are not validated against the user's timeline.
+
+**Affected files:**
+- `src/lib/jurisdiction-data.ts` — verify/update setupTimeWeeks values
+- `src/components/architect/ArchitectResultsClient.tsx` — add timeline warnings
 
 ```
-Find the data source for jurisdiction formation timeline estimates (in jurisdictions.ts or similar constants file).
+Current setupTimeWeeks in jurisdiction-data.ts (verified):
+- Cayman Islands: { min: 1, max: 2 } — this is for ELP only, not registered/licensed funds
+- Luxembourg: { min: 2, max: 12 } — OK for SCSp, low for RAIF/SIF
+- Delaware: { min: 1, max: 7 }
+- Singapore: { min: 1, max: 24 }
+- Ireland: { min: 1, max: 12 }
+- BVI: { min: 1, max: 2 }
+- Jersey: { min: 1, max: 10 }
+- Switzerland: { min: 12, max: 52 }
+- Hong Kong: { min: 1, max: 24 }
+- Cyprus: { min: 2, max: 24 }
+- Dubai (DIFC): { min: 1, max: 24 }
 
-Update the timeline estimates to reflect current (2025) regulator processing times:
+Review and update these to reflect realistic 2025/2026 processing:
+- Cayman: min 1 is accurate for ELP; for Registered Fund (CIMA) add note about 6-10 weeks
+- Luxembourg RAIF: should note 10-16 weeks; SCSp unregulated is 2-4 weeks
+- Ireland QIAIF: 24+ weeks is missing context (current max is 12)
+- Singapore VCC: MAS processing is 8-14 weeks
 
-CAYMAN ISLANDS:
-  - Registered Fund (CIMA): 6–10 weeks (update if different)
-  - Licensed Fund (CIMA): 12–20 weeks
-  - Exempted LP: 1–2 weeks
+For each jurisdiction on the Results page, add a dynamic disclaimer:
+"Processing times are current estimates as of Q1 2026. Actual timelines depend on fund complexity and regulator workload."
 
-LUXEMBOURG:
-  - RAIF: 10–16 weeks
-  - SIF: 16–24 weeks  
-  - SICAR: 20–28 weeks
-  - SCSp (unregulated): 2–4 weeks
+If the user's required timeline (brief.timeline) is shorter than a jurisdiction's minimum setupTimeWeeks, flag that jurisdiction with a warning badge on the Results page:
+"⚠ Timeline Risk — formation may not complete within your target window"
 
-BVI:
-  - Private Fund (SIBA): 4–6 weeks
-  - Approved Fund: 2–4 weeks
-
-DELAWARE:
-  - LP/LLC: 1–3 business days (expedited available: same day)
-
-IRELAND:
-  - QIAIF: 24+ weeks
-  - ICAV: 8–12 weeks
-
-SINGAPORE:
-  - VCC (MAS): 8–14 weeks
-
-DUBAI (DIFC):
-  - Fund: 10–16 weeks
-
-For each jurisdiction on Step 7 (Timeline) AND on the Results page, add a dynamic disclaimer beneath each timeline figure:
-"Processing times are current estimates as of [current quarter]. Actual timelines depend on fund complexity and regulator workload."
-
-If the user's required timeline (from Step 7) is shorter than a jurisdiction's minimum, flag that jurisdiction with a warning badge on the Results page: "⚠ Timeline Risk — formation may not complete within your target window"
+Timeline mapping for comparison:
+- '30-days' = ~4 weeks
+- '60-90-days' = ~9-13 weeks
+- '6-months' = ~26 weeks
+- 'planning-only' = no constraint
 ```
 
 ---
@@ -300,53 +407,68 @@ If the user's required timeline (from Step 7) is shorter than a jurisdiction's m
 ## FIX 11 — Wizard: Estimated Completion Time
 **Problem:** No time estimate shown. Reduces friction for busy allocators.
 
+**Affected file:** `src/app/(app)/architect/page.tsx` (~line 9) OR `src/components/architect/IntakeWizard.tsx`
+
 ```
-On the Architect Wizard landing (Step 1), add a single line of muted text directly below the page heading "Architect Engine":
+On the Architect Wizard page, add a single line of muted text.
 
-"8 steps · takes approximately 3–4 minutes"
+Option A — In src/app/(app)/architect/page.tsx, below the h1 "Architect Engine" (~line 9):
+Add: <p className="text-sm text-text-secondary">8 steps · takes approximately 3-4 minutes</p>
 
-Place this between the heading and the fund type grid.
-Keep it subtle: small font, muted gray color, no icon needed.
+Option B — In IntakeWizard.tsx, inside the aside (sidebar) section, below the existing "Your session is saved automatically." text (~line 244):
+Add a line: "8 steps · approximately 3-4 minutes"
+
+Keep it subtle: text-xs or text-sm, text-text-tertiary color.
 ```
 
 ---
 
 ## FIX 12 — Wizard: Per-Step Autosave Confirmation
-**Problem:** "Your session is saved automatically" is stated once at the top but gives no visual confirmation as users progress through steps.
+**Problem:** "Your session is saved automatically" is stated once in the sidebar but gives no visual confirmation as users progress.
+
+**Affected file:** `src/components/architect/IntakeWizard.tsx`
 
 ```
-In the Architect Wizard component, after each step's state is persisted (to localStorage, session, or server), show a brief autosave confirmation:
+The useWizard hook (src/hooks/useWizard.ts) persists briefData to localStorage on every change (useEffect at line 42-44). This happens automatically.
 
-Implementation:
-1. Add a small "Saved ✓" indicator that appears in the top-right area of the wizard card (or near the step counter)
-2. It should appear for 2 seconds after each successful save, then fade out
-3. Use a subtle green checkmark style — do not use a toast or modal
-4. If save fails (localStorage full, network error for server-side save), show "⚠ Not saved — check your connection" in amber
+In IntakeWizard.tsx, add a brief autosave confirmation:
 
-This applies to all 8 steps.
+1. Add state: const [showSaved, setShowSaved] = useState(false)
+2. After each successful step completion (in the proceed() function at ~line 187), trigger:
+   setShowSaved(true)
+   setTimeout(() => setShowSaved(false), 2000)
+
+3. Render a small "Saved ✓" indicator near the step counter in the sidebar or in the top-right area of the main content section. Use:
+   {showSaved && <span className="text-xs text-green-500 transition-opacity">Saved ✓</span>}
+
+4. Use a fade-out animation (opacity transition).
+
+This applies to all 8 steps (the proceed function is shared).
 ```
 
 ---
 
 ## FIX 13 — Wizard: Step 1 — Add Hover/Tap Expanded Descriptions
-**Problem:** Fund type cards show only a name + one-liner. Complex types (Real Assets, Multi-Strategy, Continuation Fund) need more context.
+**Problem:** Fund type cards show only a name + one-liner. Complex types need more context.
+
+**Affected file:** `src/components/architect/IntakeWizard.tsx` — step1Options array and Step 1 rendering block
 
 ```
-On Wizard Step 1's fund type grid, enhance each card with an expandable description:
+In IntakeWizard.tsx, enhance each fund type card in Step 1:
 
-1. Add an info icon (ⓘ) to the top-right corner of each fund type card
-2. On hover (desktop) or tap (mobile), show an expanded tooltip or inline expansion with:
-   - 2–3 sentence description of the fund type
-   - Typical LP base for this type
-   - Common jurisdiction for this type (teaser)
+1. Extend the step1Options array type to include an expandedDescription field:
+   { value: FundStrategy; label: string; description: string; expandedDescription: string; icon: ... }
 
-Example for Private Equity:
-  "Closed-end vehicles targeting control or significant minority positions in private companies. Typical LPs include pension funds, endowments, and family offices. Cayman and Delaware are the most common domiciles."
+2. Add expandedDescription content for all types. Examples:
 
-Example for Continuation Fund:
-  "A GP-led secondary transaction where assets from a maturing fund are transferred to a new vehicle. Requires existing LP consent and independent fairness opinion. Subject to ILPA conflict-of-interest guidelines."
+- private-equity: "Closed-end vehicles targeting control or significant minority positions in private companies. Typical LPs include pension funds, endowments, and family offices. Cayman and Delaware are the most common domiciles."
+- real-estate: "Closed-end vehicles focused on property acquisition, value-add, and core strategies. LP bases typically include pension funds and insurance companies. Luxembourg and Cayman are dominant domiciles for cross-border capital."
+- continuation-fund: "A GP-led secondary transaction where assets from a maturing fund are transferred to a new vehicle. Requires existing LP consent and independent fairness opinion. Subject to ILPA conflict-of-interest guidelines."
+- co-investment: "Deal-by-deal or committed capital vehicles that invest alongside a main fund. Structure varies significantly based on commitment model. Delaware and Cayman are most common."
+(Write out descriptions for all 8+ fund types)
 
-Write out the full description content for all 8 existing fund types plus the 2 new types added in FIX 03.
+3. Add an info icon (use lucide-react Info icon) to the top-right corner of each card.
+4. On hover (desktop) or tap (mobile), show the expandedDescription in a tooltip or inline expansion below the card.
 ```
 
 ---
@@ -354,53 +476,72 @@ Write out the full description content for all 8 existing fund types plus the 2 
 ## FIX 14 — Wizard: Add "I'm Not Sure Yet" Option
 **Problem:** Users in exploratory mode abandon the wizard when forced to commit to a fund type they haven't decided on.
 
+**Affected files:**
+- `src/lib/types.ts` — add 'explore-all' to FundStrategy union
+- `src/components/architect/IntakeWizard.tsx` — add card to step1Options
+- `src/components/architect/ArchitectResultsClient.tsx` — handle explore mode
+
 ```
-On Wizard Step 1, add a final card option to the fund type grid:
+1. In src/lib/types.ts, add to FundStrategy: | 'explore-all'
 
-- Name: "I'm Not Sure Yet"
-- Subtitle: "Explore all fund structures side by side"
-- Icon: a question mark or compass icon
-- Styling: slightly different from the other cards — use a dashed border or lighter background to visually distinguish it as an exploratory path
+2. In IntakeWizard.tsx, add a final card to step1Options:
+- value: 'explore-all'
+- label: "I'm Not Sure Yet"
+- description: "Explore all fund structures side by side"
+- icon: Compass (import from lucide-react)
+- Style differently: use a dashed border (border-dashed) to distinguish it
 
-When selected:
-1. The wizard should continue through all remaining steps (size, GP domicile, LP base, etc.) normally
-2. On the Results page, show ALL fund types as rows in a comparison table rather than a single-structure deep-dive
-3. Add a note: "You selected 'Explore All' mode. Results show comparative suitability across fund structures for your profile. Select a specific fund type to see a detailed analysis."
+3. When 'explore-all' is selected and results are generated:
+   In ArchitectResultsClient.tsx, detect brief.strategy === 'explore-all' and show ALL fund types as rows in a comparison table rather than a single-structure deep-dive.
+   Add a note: "You selected 'Explore All' mode. Results show comparative suitability across fund structures."
 ```
 
 ---
 
 ## FIX 15 — Demo User Label: Restyle for Institutional Credibility
-**Problem:** The "ADDemo User — Demo dataset: values and people shown..." label appears as prominent text on every page, making the platform feel like a prototype.
+**Problem:** The DemoDatasetNotice component appears as a prominent amber banner on pages. The sidebar shows "AD / Demo User" text.
+
+**Affected files:**
+- `src/components/shared/DemoDatasetNotice.tsx` — restyle from banner to compact badge
+- `src/components/navigation/AppSidebar.tsx` — restyle "Demo User" label (~line 122-126)
 
 ```
-Find the component that renders the Demo User label/banner (likely in the sidebar, header, or layout component).
+1. In DemoDatasetNotice.tsx (currently 7 lines), restyle:
 
-Restyle it as follows:
-1. Replace the full text block with a compact pill/badge in the top navigation bar
-2. Badge text: "DEMO MODE"
-3. Style: small, outlined badge (border only, no fill), muted gray color, 11px font
-4. On hover/click, show a small tooltip: "You are viewing GNCO with demo data. Sign up to use live data."
-5. Remove the verbose "Demo dataset: values and people shown in this environment are sample data for product demonstration." text from the main content area entirely — this information should only appear on hover of the badge
+Current: amber banner with full text "Demo dataset: values and people shown in this environment are sample data for product demonstration."
 
-This change applies to the layout wrapper, so it will affect all pages simultaneously.
+Replace with: a compact pill/badge.
+- Badge text: "DEMO MODE"
+- Style: small outlined badge (border border-text-tertiary text-text-tertiary), 11px font (text-[11px]), rounded-full, px-2 py-0.5
+- On hover, show a tooltip with the full demo dataset explanation
+- Remove the verbose text from the main content area
+
+2. In AppSidebar.tsx (~line 122-126), the bottom section shows:
+   <span className="flex h-8 w-8 ...">AD</span>
+   <span className="hidden truncate text-sm text-text-secondary lg:inline">Demo User</span>
+
+This is fine for the sidebar. No change needed here unless you want to add the DEMO MODE badge near the GNCO logo area instead.
 ```
 
 ---
 
 ## FIX 16 — Step 8 (Experience): Add Self-Reported Data Disclaimer
-**Problem:** Step 8 asks about GP experience to calibrate recommendations, but GNCO cannot verify claims. No disclaimer exists at this step.
+**Problem:** Step 8 asks about GP experience to calibrate recommendations, but GNCO cannot verify claims.
+
+**Affected file:** `src/components/architect/IntakeWizard.tsx` — currentStep === 8 block (~line 455-478)
 
 ```
-On Wizard Step 8 (Experience), add a small disclaimer text block directly below the step heading, before the input options:
+In IntakeWizard.tsx, inside the currentStep === 8 block (~line 455), add a disclaimer text below the heading "Your fund formation experience?" and before the experience options:
 
 Text:
 "GNCO models recommendations based on self-reported experience data. We do not verify credentials or prior fund history. Regulatory bodies (SEC, CIMA, CSSF, MAS) will conduct their own due diligence during the registration process."
 
-Style: small, muted gray text, italic, similar to the existing footer disclaimer in tone.
+Style: text-xs text-text-tertiary italic, max-w-2xl mx-auto text-center
 
-Additionally, if the user selects "First-time GP / No prior fund" as their experience level, trigger an inline guidance note:
+Additionally, when the user selects 'first-fund' (the first option, value 'first-fund' at ~line 460), trigger an inline guidance note below the options:
 "As a first-time GP, certain jurisdictions and fund structures have higher minimum requirements or require additional regulatory approvals. Your results will highlight these thresholds."
+
+This conditional is: {brief.experience === 'first-fund' && <p>...</p>}
 ```
 
 ---
@@ -414,116 +555,118 @@ Additionally, if the user selects "First-time GP / No prior fund" as their exper
 ---
 
 ## FIX 17 — Results Page: PDF Export
-**Problem:** No export functionality. Every institutional user will need to share results with counsel or LPs.
+**Problem:** No prominent PDF export on the results page. The RecommendationPanel has export buttons but is NOT rendered by ArchitectResultsClient.
+
+**Affected files:**
+- `src/components/architect/ArchitectResultsClient.tsx` — add export button
+- `src/lib/pdf.ts` — already has buildSimplePdf() and buildAttorneyBriefPdf()
+- OR use the existing `generateSimplePdf()` helper from `RecommendationPanel.tsx`
 
 ```
-On the Results page, add a "Export PDF Report" button in the page header area (top right, prominent).
+Note: The codebase already has PDF infrastructure:
+- src/lib/pdf.ts has buildSimplePdf() and buildAttorneyBriefPdf() (server-side Buffer-based)
+- RecommendationPanel.tsx has a client-side generateSimplePdf() function (~line 45-56) that creates and downloads PDFs using Blob
+- RecommendationPanel.tsx also has an exportPdf() function (~line 211-224) that generates a pre-legal brief PDF
+- There's also Excel export via src/lib/excel-export.ts (exportArchitectResults())
 
-The PDF export should include:
-1. Cover page:
-   - "GNCO Fund Structure Analysis"
-   - User's fund profile summary (from wizard inputs)
+The simplest path is to add export buttons to ArchitectResultsClient.tsx:
+
+1. Add a "Export PDF Report" button in the page header (top right, prominent).
+   Use the client-side approach from RecommendationPanel (Blob + createObjectURL).
+
+2. The PDF should include:
+   - Title: "GNCO Fund Structure Analysis"
+   - User's fund profile summary (from brief)
    - Date generated
-   - GNCO logo and "Confidential — For Discussion Purposes Only" watermark
+   - Top 3 jurisdiction recommendations with scores, costs, timelines
+   - Full disclaimer
 
-2. Jurisdiction Comparison Table:
-   - All recommended jurisdictions with scores, costs, timelines
+3. Add a secondary "Download Excel" button using the existing exportArchitectResults function from src/lib/excel-export.ts.
 
-3. Detailed pages per top 3 jurisdictions:
-   - Full score breakdown (from FIX 08)
-   - Formation steps overview
-   - Key service providers needed (fund lawyer, administrator, auditor — generic categories only)
-   - Relevant regulatory authority and contact
-
-4. Full disclaimer page (copy from existing footer disclaimer)
-
-Implementation options (choose based on existing stack):
-   Option A: Use react-pdf or @react-pdf/renderer for client-side PDF generation
-   Option B: Use a server-side route /api/export-results that accepts wizard state and returns a PDF buffer
-   Option C: Use html2canvas + jsPDF to screenshot and export the results page
-
-Add a secondary "Copy shareable link" button that generates a URL with wizard state encoded in query params, so results can be shared without requiring login.
+4. Consider importing and rendering the ShareResultsButton from RecommendationPanel.tsx, which already handles share link generation via /api/architect/share.
 ```
 
 ---
 
 ## FIX 18 — Results Page: "Request a Consultation" CTA
-**Problem:** No lead capture on the highest-intent page in the entire product.
+**Problem:** The BookCallCTA component exists but is NOT rendered on the ArchitectResultsClient page.
+
+**Affected file:** `src/components/architect/ArchitectResultsClient.tsx`
 
 ```
-On the Results page, add a sticky CTA section at the bottom of the results (above the disclaimer footer):
+The BookCallCTA component (src/components/architect/BookCallCTA.tsx) already exists with:
+- "Want Expert Guidance?" heading
+- Strategy call booking via Calendly
+- Value props (Expert Review, Customized Plan, Action Items)
+- Pricing: "FREE (Launch Offer)" crossed out from €1,500
 
-Layout: full-width card with subtle background
-Heading: "Ready to proceed with fund formation?"
-Subheading: "Connect with a vetted fund formation specialist who can act on these recommendations."
-Primary button: "Request a Consultation →"
-Secondary link: "Download your results PDF first →" (links to FIX 17 export)
+It is rendered in RecommendationPanel.tsx (~line 304) but NOT in ArchitectResultsClient.tsx.
 
-The "Request a Consultation" button should:
-1. Open a simple modal with a short form: Name, Email, Fund Type (pre-filled from wizard), Jurisdiction of Interest (pre-filled from top recommendation), Message (optional)
-2. On submit, send to your configured email endpoint or CRM
-3. Show a confirmation: "We'll connect you with a specialist within 24 hours."
+Simply import and render it in ArchitectResultsClient.tsx:
 
-This is the primary monetisation/lead generation touchpoint. Make it visually prominent but not aggressive.
+1. Import: import { BookCallCTA } from '@/components/architect/BookCallCTA'
+2. Add it after the email capture / attorney brief section (~line 158), before the DataVersionBadge:
+   <BookCallCTA />
+
+Alternatively, add a simpler sticky CTA section:
+- Heading: "Ready to proceed with fund formation?"
+- Subheading: "Connect with a vetted fund formation specialist who can act on these recommendations."
+- Primary button: "Request a Consultation →" (links to Calendly or opens modal)
 ```
 
 ---
 
 ## FIX 19 — Results Page: Value Proposition Anchor
-**Problem:** No competitive framing vs. hiring a law firm. The platform's core value prop isn't stated anywhere near the results.
+**Problem:** No competitive framing vs. hiring a law firm.
+
+**Affected file:** `src/components/architect/ArchitectResultsClient.tsx`
 
 ```
-On the Results page, add a subtle value-proposition banner directly below the page heading, above the results:
+In ArchitectResultsClient.tsx, add a subtle value-proposition banner directly below the page heading (~line 99), above the results:
 
 Text:
-"This analysis covers 15 jurisdictions across 47 regulatory variables. Equivalent work from a fund formation law firm typically costs $8,000–$20,000 and takes 2–4 weeks. GNCO delivered it in under 5 minutes."
+"This analysis covers 16 jurisdictions across 47 regulatory variables. Equivalent work from a fund formation law firm typically costs $8,000-$20,000 and takes 2-4 weeks. GNCO delivered it in under 5 minutes."
 
-Style: small card with a light background (not intrusive), left-aligned, with a small GNCO logo or icon.
+Style: small card with bg-bg-elevated border border-bg-border rounded-lg p-4, text-sm text-text-secondary
 
-Make this dismissible (X button) so users who have seen it before can close it. Use localStorage to remember if the user has dismissed it (key: 'gnco_value_prop_dismissed').
+Make this dismissible (X button). Use localStorage to remember dismissal:
+Key: 'gnco_value_prop_dismissed'
 ```
 
 ---
 
 ## FIX 20 — Glossary Tooltip Layer (Global)
-**Problem:** Technical terms throughout the platform (RAIF, AIFMD, UBTI, SCSp, CIMA, CSSF, etc.) are unexplained. Range of users spans sophisticated GPs to newly allocating family offices.
+**Problem:** Technical terms throughout the platform (RAIF, AIFMD, UBTI, SCSp, CIMA, CSSF, etc.) are unexplained.
+
+**New files to create:**
+- `src/lib/glossary.ts` — glossary data
+- `src/components/ui/GlossaryTerm.tsx` — tooltip component
+- `src/app/(app)/glossary/page.tsx` — glossary page
 
 ```
-Create a global glossary tooltip system that works across all pages in the GNCO platform.
-
-Implementation:
-1. Create a glossary data file (glossary.ts or glossary.json) with at least the following terms:
+1. Create src/lib/glossary.ts with at least these terms:
    - AIFMD: "EU Alternative Investment Fund Managers Directive — governs marketing of funds to EU professional investors"
    - RAIF: "Reserved Alternative Investment Fund — Luxembourg fund structure requiring no direct regulatory approval, but must appoint an AIFM"
    - CIMA: "Cayman Islands Monetary Authority — the fund regulator for Cayman Islands funds"
    - CSSF: "Commission de Surveillance du Secteur Financier — Luxembourg's financial regulator"
-   - SCSp: "Société en Commandite Spéciale — Luxembourg's equivalent of a limited partnership, no legal personality"
-   - SLP: "Segregated Portfolio Company or Special Limited Partnership depending on context"
+   - SCSp: "Societe en Commandite Speciale — Luxembourg's equivalent of a limited partnership, no legal personality"
    - UBTI: "Unrelated Business Taxable Income — US tax issue for tax-exempt LPs investing in operating companies"
-   - NPPR: "National Private Placement Regime — allows non-EU AIFMs to market to EU investors without full AIFMD passport, subject to local rules"
+   - NPPR: "National Private Placement Regime — allows non-EU AIFMs to market to EU investors without full AIFMD passport"
    - ILPA: "Institutional Limited Partners Association — industry body setting LP governance standards"
-   - GP: "General Partner — the fund manager who makes investment decisions"
-   - LP: "Limited Partner — investor in the fund with limited liability"
-   - AIF: "Alternative Investment Fund — any collective investment vehicle not covered by the UCITS directive"
-   - FATCA: "Foreign Account Tax Compliance Act — US law requiring foreign financial institutions to report US account holders"
-   - CRS: "Common Reporting Standard — OECD's global automatic exchange of financial account information"
-   - KYC: "Know Your Customer — identity verification process required by AML regulations"
-   - NAV: "Net Asset Value — total value of fund assets minus liabilities"
-   - WACC: "Weighted Average Cost of Capital — blended cost of a company's debt and equity financing"
+   - GP/LP/AIF/FATCA/CRS/KYC/NAV (see original playbook for full definitions)
 
-2. Create a <GlossaryTerm> React component that:
+2. Create src/components/ui/GlossaryTerm.tsx:
    - Wraps any term on the page
-   - Shows a dotted underline to indicate it's hoverable
+   - Shows a dotted underline (border-b border-dotted border-text-tertiary)
    - On hover/tap, displays a tooltip with the definition
-   - Tooltip includes a "Full Glossary →" link to /glossary page
+   - Tooltip includes a "Full Glossary →" link to /glossary
 
-3. Apply the <GlossaryTerm> wrapper to all instances of glossary terms across:
-   - Wizard steps
-   - Results page
-   - Compare page
-   - Any static content pages
+3. Apply <GlossaryTerm> to key terms across:
+   - ArchitectResultsClient.tsx (jurisdiction names, vehicle types)
+   - IntakeWizard.tsx (fund type descriptions)
+   - RecommendationPanel.tsx (scoring labels)
 
-4. Create a /glossary page listing all terms alphabetically with full definitions.
+4. Create src/app/(app)/glossary/page.tsx listing all terms alphabetically.
 ```
 
 ---
@@ -538,26 +681,54 @@ Implementation:
 
 | Priority | Fix | Effort | Impact |
 |----------|-----|--------|--------|
-| 1 | FIX 01 — Results demo fallback | Medium | 🔴 Critical |
-| 2 | FIX 06 — Hide Back on Step 1 | Low | 🔴 Quick win |
-| 3 | FIX 03 — Add Hedge Fund + FoF types | Medium | 🔴 Critical |
-| 4 | FIX 15 — Restyle Demo User label | Low | 🟡 Credibility |
-| 5 | FIX 04 — Continuation Fund warning | Low | 🔴 Risk mitigation |
-| 6 | FIX 05 — Fix Co-Investment description | Low | 🟡 Accuracy |
-| 7 | FIX 11 — Add "3–4 minutes" copy | Low | 🟠 UX |
-| 8 | FIX 12 — Per-step autosave confirmation | Low | 🟠 UX |
-| 9 | FIX 07 — Jurisdiction data timestamps | Medium | 🟡 Credibility |
-| 10 | FIX 08 — Score methodology transparency | Medium | 🟡 Credibility |
-| 11 | FIX 09 — LP Base investor types | High | 🔴 Data accuracy |
-| 12 | FIX 10 — Timeline regulator warnings | Medium | 🟡 Data accuracy |
-| 13 | FIX 02 — Better empty state UI | Low | 🟠 UX |
-| 14 | FIX 13 — Hover expanded descriptions | Medium | 🟠 UX |
-| 15 | FIX 14 — "I'm Not Sure Yet" option | Medium | 🟠 UX |
-| 16 | FIX 16 — Step 8 experience disclaimer | Low | 🟡 Risk |
-| 17 | FIX 17 — PDF Export | High | 🔵 Feature |
-| 18 | FIX 18 — Consultation CTA | Medium | 🔵 Revenue |
-| 19 | FIX 19 — Value prop banner | Low | 🔵 Conversion |
-| 20 | FIX 20 — Glossary tooltip system | High | 🔵 Credibility |
+| 1 | FIX 01 — Results demo fallback | Medium | CRITICAL |
+| 2 | FIX 06 — Hide Back on Step 1 | Low | Quick win |
+| 3 | FIX 03 — Add Hedge Fund + FoF types | Medium | CRITICAL |
+| 4 | FIX 15 — Restyle Demo User label | Low | Credibility |
+| 5 | FIX 04 — Continuation Fund warning | Low | Risk mitigation |
+| 6 | FIX 05 — Fix Co-Investment description | Low | Accuracy |
+| 7 | FIX 11 — Add "3-4 minutes" copy | Low | UX |
+| 8 | FIX 12 — Per-step autosave confirmation | Low | UX |
+| 9 | FIX 07 — Jurisdiction data timestamps | Medium | Credibility |
+| 10 | FIX 08 — Score methodology transparency | Medium | Credibility |
+| 11 | FIX 09 — LP Base investor types | High | Data accuracy |
+| 12 | FIX 10 — Timeline regulator warnings | Medium | Data accuracy |
+| 13 | FIX 02 — Better empty state UI | Low | UX |
+| 14 | FIX 13 — Hover expanded descriptions | Medium | UX |
+| 15 | FIX 14 — "I'm Not Sure Yet" option | Medium | UX |
+| 16 | FIX 16 — Step 8 experience disclaimer | Low | Risk |
+| 17 | FIX 17 — PDF Export | Medium | Feature (infra exists) |
+| 18 | FIX 18 — Consultation CTA | Low | Revenue (component exists) |
+| 19 | FIX 19 — Value prop banner | Low | Conversion |
+| 20 | FIX 20 — Glossary tooltip system | High | Credibility |
+
+---
+
+## Verified File Map (actual paths)
+
+```
+src/app/(app)/architect/page.tsx                    — Wizard page wrapper
+src/app/(app)/architect/results/page.tsx            — Results page wrapper (thin, delegates to client)
+src/components/architect/IntakeWizard.tsx            — Full wizard (all 8 steps, 500 lines)
+src/components/architect/ArchitectResultsClient.tsx  — Results page client component
+src/components/architect/RecommendationPanel.tsx     — Rich results panel (NOT currently rendered)
+src/components/architect/BookCallCTA.tsx             — Consultation CTA (exists, not rendered on results)
+src/components/architect/EmailCaptureForm.tsx        — Email gate before attorney brief
+src/components/architect/WizardStep.tsx              — STUB (3 lines, unused)
+src/components/shared/DemoDatasetNotice.tsx          — Demo banner component
+src/components/navigation/AppSidebar.tsx             — Sidebar with "Demo User" label
+src/hooks/useWizard.ts                               — Wizard state hook (localStorage + sessionStorage)
+src/lib/types.ts                                     — All TypeScript types
+src/lib/architect-logic.ts                           — Scoring engine (generateRecommendations)
+src/lib/jurisdiction-scoring.ts                      — Separate scoring module (scoreJurisdiction)
+src/lib/jurisdiction-data.ts                         — 16 jurisdiction profiles (with lastUpdated)
+src/lib/pdf.ts                                       — PDF generation utilities
+src/lib/excel-export.ts                              — Excel export utility
+src/lib/analytics.ts                                 — Analytics tracking (track, trackEvent)
+src/components/ui/GlossaryTerm.tsx                   — NEW: Glossary tooltip (FIX 20)
+src/app/(app)/glossary/page.tsx                      — NEW: Glossary page (FIX 20)
+src/lib/glossary.ts                                  — NEW: Glossary data (FIX 20)
+```
 
 ---
 
@@ -574,21 +745,21 @@ After completing each Claude Code prompt:
 
 ---
 
-## Files Most Likely to Be Modified
+## Key Technical Notes
 
-```
-/app/architect/page.tsx               — Wizard Step 1
-/app/architect/results/page.tsx       — Results page
-/app/layout.tsx                       — Demo user label (global)
-/components/architect/WizardStep.tsx  — Step wrapper (autosave, back button)
-/lib/jurisdictions.ts                 — Jurisdiction data (costs, timelines)
-/lib/architectEngine.ts               — Scoring model
-/components/ui/GlossaryTerm.tsx       — NEW: Glossary tooltip (FIX 20)
-/app/glossary/page.tsx                — NEW: Glossary page (FIX 20)
-/lib/glossary.ts                      — NEW: Glossary data (FIX 20)
-```
+1. **IntakeWizard is monolithic** — All 8 wizard steps are inline in a single 500-line component with AnimatePresence transitions. There is no per-step component extraction. Edits to any step happen in the same file.
+
+2. **Two results UIs exist** — `ArchitectResultsClient.tsx` (currently active, simpler) and `RecommendationPanel.tsx` (richer, with score bars, LP tax modeler, PDF/Excel export, BookCallCTA). Consider wiring up RecommendationPanel for a better out-of-box experience.
+
+3. **Scoring model** — `architect-logic.ts` uses priority-weighted scoring with BASE_WEIGHTS = [3, 2, 1.5, 1.2, 1]. Scores are clamped 0-100 per dimension. The `jurisdiction-scoring.ts` is a separate module not used by the wizard flow.
+
+4. **State persistence** — Wizard data is in `localStorage` key `gnco:architect-brief`, step number in `sessionStorage` key `gnco:architect-step`. The results page reads from the same localStorage key.
+
+5. **Email gate** — The results page shows EmailCaptureForm first; only after email submission does it show the AttorneyBrief component. The demo fallback should consider whether to bypass or include this gate.
+
+6. **Existing exports** — RecommendationPanel already has PDF export (client-side Blob), Excel export (via excel-export.ts), and share link (via /api/architect/share). These can be reused in ArchitectResultsClient.
 
 ---
 
 *GNCO Claude Code Fix Playbook — 20 fixes across Critical, Data Accuracy, UX, and Feature phases*
-*Generated by Claude for Notis @ JetSet / GNCO — March 2026*
+*Updated with verified codebase paths and component details — March 2026*
